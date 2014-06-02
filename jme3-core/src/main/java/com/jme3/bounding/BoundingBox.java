@@ -348,9 +348,9 @@ public class BoundingBox extends BoundingVolume {
         transMatrix.mult(vars.vect1, vars.vect1);
 
         // Assign the biggest rotations after scales.
-        box.xExtent = FastMath.abs(vars.vect1.getX());
-        box.yExtent = FastMath.abs(vars.vect1.getY());
-        box.zExtent = FastMath.abs(vars.vect1.getZ());
+        box.xExtent = (vars.vect1.x <= 0.0F) ? 0.0F - vars.vect1.x : vars.vect1.x; //FastMath.abs(vars.vect1.getX());
+        box.yExtent = (vars.vect1.y <= 0.0F) ? 0.0F - vars.vect1.y : vars.vect1.y; //FastMath.abs(vars.vect1.getY());
+        box.zExtent = (vars.vect1.z <= 0.0F) ? 0.0F - vars.vect1.z : vars.vect1.z; //FastMath.abs(vars.vect1.getZ());        
 
         vars.release();
 
