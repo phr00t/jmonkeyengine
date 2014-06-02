@@ -118,15 +118,15 @@ public final class Matrix3f implements Savable, Cloneable, java.io.Serializable 
      * Takes the absolute value of all matrix fields locally.
      */
     public void absoluteLocal() {
-        m00 = FastMath.abs(m00);
-        m01 = FastMath.abs(m01);
-        m02 = FastMath.abs(m02);
-        m10 = FastMath.abs(m10);
-        m11 = FastMath.abs(m11);
-        m12 = FastMath.abs(m12);
-        m20 = FastMath.abs(m20);
-        m21 = FastMath.abs(m21);
-        m22 = FastMath.abs(m22);
+        m00 = (m00 <= 0.0f) ? 0.0f - m00 : m00;//FastMath.abs(m00);
+        m01 = (m01 <= 0.0f) ? 0.0f - m01 : m01;//FastMath.abs(m01);
+        m02 = (m02 <= 0.0f) ? 0.0f - m02 : m02;//FastMath.abs(m02);
+        m10 = (m10 <= 0.0f) ? 0.0f - m10 : m10;//FastMath.abs(m10);
+        m11 = (m11 <= 0.0f) ? 0.0f - m11 : m11;//FastMath.abs(m11);
+        m12 = (m12 <= 0.0f) ? 0.0f - m12 : m12;//FastMath.abs(m12);
+        m20 = (m20 <= 0.0f) ? 0.0f - m20 : m20;//FastMath.abs(m20);
+        m21 = (m21 <= 0.0f) ? 0.0f - m21 : m21;//FastMath.abs(m21);
+        m22 = (m22 <= 0.0f) ? 0.0f - m22 : m22;//FastMath.abs(m22);
     }
 
     /**

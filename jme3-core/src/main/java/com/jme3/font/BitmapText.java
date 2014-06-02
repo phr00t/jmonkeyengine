@@ -248,6 +248,13 @@ public class BitmapText extends Node {
         return letters.getTotalWidth();
     }
 
+    public float getLineWidthSkipBox() {
+        if (needRefresh) {
+            assemble();
+        }
+        return letters.getTotalWidth();        
+    }
+    
     /**
      * @return line count
      */
