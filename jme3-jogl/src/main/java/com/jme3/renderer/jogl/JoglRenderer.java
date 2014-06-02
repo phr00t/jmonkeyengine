@@ -119,6 +119,7 @@ public class JoglRenderer implements Renderer {
     private final Statistics statistics = new Statistics();
     private int vpX, vpY, vpW, vpH;
     private int clipX, clipY, clipW, clipH;
+    private boolean linearizeSrgbImages;
 
     public JoglRenderer() {
     }
@@ -413,6 +414,11 @@ public class JoglRenderer implements Renderer {
                 gl.glEnable(GL.GL_MULTISAMPLE);
             }
             caps.add(Caps.Multisample);
+        }
+        
+        //supports sRGB pipeline
+        if (gl.isExtensionAvailable("GL_ARB_framebuffer_sRGB") && gl.isExtensionAvailable("GL_EXT_texture_sRGB")){
+            caps.add(Caps.Srgb);
         }
         
         logger.log(Level.FINE, "Caps: {0}", caps);
@@ -1443,7 +1449,7 @@ public class JoglRenderer implements Renderer {
                     + ":" + fb.getHeight() + " is not supported.");
         }
 
-        TextureUtil.GLImageFormat glFmt = TextureUtil.getImageFormatWithError(rb.getFormat());
+        TextureUtil.GLImageFormat glFmt = TextureUtil.getImageFormatWithError(rb.getFormat(), fb.isSrgb());
         
         if (fb.getSamples() > 1 && gl.isExtensionAvailable("GL_EXT_framebuffer_multisample")
                 && gl.isGL2GL3()/*&& gl.isFunctionAvailable("glRenderbufferStorageMultisample")*/) {
@@ -1956,16 +1962,11 @@ public class JoglRenderer implements Renderer {
         }
 
         // Yes, some OpenGL2 cards (GeForce 5) still dont support NPOT.
-        if (!gl.isExtensionAvailable("GL_ARB_texture_non_power_of_two")) {
-            if (img.getWidth() != 0 && img.getHeight() != 0) {
-                if (!FastMath.isPowerOfTwo(img.getWidth())
-                        || !FastMath.isPowerOfTwo(img.getHeight())) {
-                    if (img.getData(0) == null) {
-                        throw new RendererException("non-power-of-2 framebuffer textures are not supported by the video hardware");
-                    } else {
-                        MipMapGenerator.resizeToPowerOf2(img);
-                    }
-                }
+        if (!gl.isExtensionAvailable("GL_ARB_texture_non_power_of_two") && img.isNPOT()) {
+            if (img.getData(0) == null) {
+                throw new RendererException("non-power-of-2 framebuffer textures are not supported by the video hardware");
+            } else {
+                MipMapGenerator.resizeToPowerOf2(img);
             }
         }
 
@@ -1995,19 +1996,19 @@ public class JoglRenderer implements Renderer {
                 return;
             }
             for (int i = 0; i < 6; i++) {
-                TextureUtil.uploadTexture(img, GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, i, 0);
+                TextureUtil.uploadTexture(img, GL.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, i, 0, linearizeSrgbImages);
             }
         } else if (target == GL.GL_TEXTURE_2D_ARRAY) {
             List<ByteBuffer> data = img.getData();
             // -1 index specifies prepare data for 2D Array
-            TextureUtil.uploadTexture(img, target, -1, 0);
+            TextureUtil.uploadTexture(img, target, -1, 0, linearizeSrgbImages);
             for (int i = 0; i < data.size(); i++) {
                 // upload each slice of 2D array in turn
                 // this time with the appropriate index
-                TextureUtil.uploadTexture(img, target, i, 0);
+                TextureUtil.uploadTexture(img, target, i, 0, linearizeSrgbImages);
             }
         } else {
-            TextureUtil.uploadTexture(img, target, 0, 0);
+            TextureUtil.uploadTexture(img, target, 0, 0, linearizeSrgbImages);
         }
 
         if (img.getMultiSamples() != imageSamples) {
@@ -2066,7 +2067,7 @@ public class JoglRenderer implements Renderer {
 
     public void modifyTexture(Texture tex, Image pixels, int x, int y) {
       setTexture(0, tex);
-      TextureUtil.uploadSubTexture(pixels, convertTextureType(tex.getType(), tex.getImage().getMultiSamples(), -1), 0, x, y);
+      TextureUtil.uploadSubTexture(pixels, convertTextureType(tex.getType(), tex.getImage().getMultiSamples(), -1), 0, x, y, linearizeSrgbImages);
     }
 
     public void clearTextureUnits() {
@@ -2548,7 +2549,7 @@ public class JoglRenderer implements Renderer {
         clearTextureUnits();
     }
 
-    public void renderMesh(Mesh mesh, int lod, int count) {
+    public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
         if (mesh.getVertexCount() == 0) {
             return;
         }
@@ -2588,5 +2589,20 @@ public class JoglRenderer implements Renderer {
 //        }else{
         renderMeshDefault(mesh, lod, count);
 //        }
+    }
+
+    public void setMainFrameBufferSrgb(boolean srgb) {
+        //Gamma correction
+        if(srgb && caps.contains(Caps.Srgb)){
+            GLContext.getCurrentGL().glEnable(GL3.GL_FRAMEBUFFER_SRGB);
+            logger.log(Level.FINER, "SRGB FrameBuffer enabled (Gamma Correction)");
+        }else{
+            GLContext.getCurrentGL().glDisable(GL3.GL_FRAMEBUFFER_SRGB);
+        }         
+    
+    }
+
+    public void setLinearizeSrgbImages(boolean linearize) {
+        linearizeSrgbImages = linearize;
     }
 }

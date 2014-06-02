@@ -40,6 +40,7 @@ import com.jme3.renderer.Renderer;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.texture.FrameBuffer;
+import com.jme3.texture.Image;
 import com.jme3.texture.Image.Format;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
@@ -51,12 +52,12 @@ import java.util.List;
 /**
  * Filters are 2D effects applied to the rendered scene.<br>
  * The filter is fed with the rendered scene image rendered in an offscreen frame buffer.<br>
- * This texture is applied on a fullscreen quad, with a special material.<br>
- * This material uses a shader that aplly the desired effect to the scene texture.<br>
+ * This texture is applied on a full-screen quad with a special material.<br>
+ * This material uses a shader that applies the desired effect to the scene texture.<br>
  * <br>
  * This class is abstract, any Filter must extend it.<br>
  * Any filter holds a frameBuffer and a texture<br>
- * The getMaterial must return a Material that use a GLSL shader immplementing the desired effect<br>
+ * The getMaterial must return a Material that use a GLSL shader implementing the desired effect<br>
  *
  * @author Rémy Bouquet aka Nehon
  */
@@ -201,10 +202,12 @@ public abstract class Filter implements Savable {
 
     /**
      * returns the default pass texture format
+     * default is {@link Format#RGB10_A2}
+     * 
      * @return
      */
     protected Format getDefaultPassTextureFormat() {
-        return Format.RGBA8;
+        return Format.RGB111110F;
     }
 
     /**
@@ -216,7 +219,7 @@ public abstract class Filter implements Savable {
     }
 
     /**
-     * contruct a Filter
+     * construct a Filter
      */
     protected Filter() {
         this("filter");
@@ -301,7 +304,7 @@ public abstract class Filter implements Savable {
 
     /**
      * Override this method if you want to modify parameters according to tpf before the rendering of the frame.
-     * This is usefull for animated filters
+     * This is useful for animated filters
      * Also it can be the place to render pre passes
      * @param tpf the time used to render the previous frame
      */
@@ -428,7 +431,7 @@ public abstract class Filter implements Savable {
     }
 
     /**
-     * returns ttrue if the filter is enabled
+     * returns true if the filter is enabled
      * @return enabled
      */
     public boolean isEnabled() {
@@ -449,7 +452,7 @@ public abstract class Filter implements Savable {
      * Note that buffer will be null if the filter is the last one in the stack 
      * and has been rendered to screen
      * @param r the renderer
-     * @param buffer the framebuffer on hich the filtre has been rendered.
+     * @param buffer the framebuffer on which the filter has been rendered.
      */
     protected void postFilter(Renderer r, FrameBuffer buffer){        
     }

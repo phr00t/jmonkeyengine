@@ -55,9 +55,7 @@ import com.jme3.texture.Texture;
 import com.jme3.texture.Texture.WrapAxis;
 import com.jme3.util.BufferUtils;
 import com.jme3.util.ListMap;
-import com.jme3.util.NativeObject;
 import com.jme3.util.NativeObjectManager;
-import com.jme3.util.SafeArrayList;
 import java.nio.*;
 import java.util.EnumSet;
 import java.util.List;
@@ -114,6 +112,7 @@ public class LwjglRenderer implements Renderer {
     private final Statistics statistics = new Statistics();
     private int vpX, vpY, vpW, vpH;
     private int clipX, clipY, clipW, clipH;
+    private boolean linearizeSrgbImages;
 
     public LwjglRenderer() {
     }
@@ -282,7 +281,7 @@ public class LwjglRenderer implements Renderer {
             caps.add(Caps.PackedDepthStencilBuffer);
         }
 
-        if (ctxCaps.GL_ARB_draw_instanced) {
+        if (ctxCaps.GL_ARB_draw_instanced && ctxCaps.GL_ARB_instanced_arrays) {
             caps.add(Caps.MeshInstancing);
         }
 
@@ -317,7 +316,8 @@ public class LwjglRenderer implements Renderer {
             caps.add(Caps.TextureCompressionLATC);
         }
 
-        if (ctxCaps.GL_EXT_packed_float) {
+        if (ctxCaps.GL_EXT_packed_float || ctxCaps.OpenGL30) {
+            // This format is part of the OGL3 specification
             caps.add(Caps.PackedFloatColorBuffer);
             if (ctxCaps.GL_ARB_half_float_pixel) {
                 // because textures are usually uploaded as RGB16F
@@ -330,7 +330,7 @@ public class LwjglRenderer implements Renderer {
             caps.add(Caps.TextureArray);
         }
 
-        if (ctxCaps.GL_EXT_texture_shared_exponent) {
+        if (ctxCaps.GL_EXT_texture_shared_exponent || ctxCaps.OpenGL30) {
             caps.add(Caps.SharedExponentTexture);
         }
 
@@ -371,7 +371,7 @@ public class LwjglRenderer implements Renderer {
                 caps.add(Caps.FrameBufferMRT);
                 logger.log(Level.FINER, "FBO Max MRT renderbuffers: {0}", maxMRTFBOAttachs);
             }
-
+            
 //            if (ctxCaps.GL_ARB_draw_buffers) {
 //                caps.add(Caps.FrameBufferMRT);
 //                glGetInteger(ARBDrawBuffers.GL_MAX_DRAW_BUFFERS_ARB, intBuf16);
@@ -391,6 +391,11 @@ public class LwjglRenderer implements Renderer {
                 glEnable(ARBMultisample.GL_MULTISAMPLE_ARB);
             }
             caps.add(Caps.Multisample);
+        }
+        
+        // Supports sRGB pipeline.
+        if ( (ctxCaps.GL_ARB_framebuffer_sRGB && ctxCaps.GL_EXT_texture_sRGB ) || ctxCaps.OpenGL30 ) {
+            caps.add(Caps.Srgb);
         }
 
         logger.log(Level.FINE, "Caps: {0}", caps);
@@ -981,6 +986,10 @@ public class LwjglRenderer implements Renderer {
                     stringBuf.append(" core");
                 }
                 stringBuf.append("\n");
+            } else {
+                // version 100 does not exist in desktop GLSL.
+                // put version 110 in that case to enable strict checking
+                stringBuf.append("#version 110\n");
             }
         }
         updateNameBuffer();
@@ -1375,7 +1384,7 @@ public class LwjglRenderer implements Renderer {
                     + ":" + fb.getHeight() + " is not supported.");
         }
 
-        TextureUtil.GLImageFormat glFmt = TextureUtil.getImageFormatWithError(rb.getFormat());
+        TextureUtil.GLImageFormat glFmt = TextureUtil.getImageFormatWithError(rb.getFormat(), fb.isSrgb());
 
         if (fb.getSamples() > 1 && GLContext.getCapabilities().GL_EXT_framebuffer_multisample) {
             int samples = fb.getSamples();
@@ -1525,7 +1534,7 @@ public class LwjglRenderer implements Renderer {
             }
         }
 
-        if (fb == null) {
+    if (fb == null) {
             // unbind any fbos
             if (context.boundFBO != 0) {
                 glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
@@ -1841,18 +1850,24 @@ public class LwjglRenderer implements Renderer {
         }
 
         if (!img.hasMipmaps() && img.isGeneratedMipmapsRequired()) {
-            // No pregenerated mips available,
-            // generate from base level if required
+            // Image does not have mipmaps, but they are required.
+            // Generate from base level.
+
             if (!GLContext.getCapabilities().OpenGL30) {
                 glTexParameteri(target, GL_GENERATE_MIPMAP, GL_TRUE);
                 img.setMipmapsGenerated(true);
+            } else {
+                // For OpenGL3 and up.
+                // We'll generate mipmaps via glGenerateMipmapEXT (see below)
             }
+        } else if (img.hasMipmaps()) {
+            // Image already has mipmaps, set the max level based on the 
+            // number of mipmaps we have.
+            glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, img.getMipMapSizes().length - 1);
         } else {
-            // Image already has mipmaps or no mipmap generation desired.
-//          glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0 );
-            if (img.getMipMapSizes() != null) {
-                glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, img.getMipMapSizes().length - 1);
-            }
+            // Image does not have mipmaps and they are not required.
+            // Specify that that the texture has no mipmaps.
+            glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, 0);
         }
 
         int imageSamples = img.getMultiSamples();
@@ -1865,16 +1880,11 @@ public class LwjglRenderer implements Renderer {
         }
 
         // Yes, some OpenGL2 cards (GeForce 5) still dont support NPOT.
-        if (!GLContext.getCapabilities().GL_ARB_texture_non_power_of_two) {
-            if (img.getWidth() != 0 && img.getHeight() != 0) {
-                if (!FastMath.isPowerOfTwo(img.getWidth())
-                        || !FastMath.isPowerOfTwo(img.getHeight())) {
-                    if (img.getData(0) == null) {
-                        throw new RendererException("non-power-of-2 framebuffer textures are not supported by the video hardware");
-                    } else {
-                        MipMapGenerator.resizeToPowerOf2(img);
-                    }
-                }
+        if (!GLContext.getCapabilities().GL_ARB_texture_non_power_of_two && img.isNPOT()) {
+            if (img.getData(0) == null) {
+                throw new RendererException("non-power-of-2 framebuffer textures are not supported by the video hardware");
+            } else {
+                MipMapGenerator.resizeToPowerOf2(img);
             }
         }
 
@@ -1904,7 +1914,7 @@ public class LwjglRenderer implements Renderer {
                 return;
             }
             for (int i = 0; i < 6; i++) {
-                TextureUtil.uploadTexture(img, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, i, 0);
+                TextureUtil.uploadTexture(img, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, i, 0, linearizeSrgbImages);
             }
         } else if (target == EXTTextureArray.GL_TEXTURE_2D_ARRAY_EXT) {
             if (!caps.contains(Caps.TextureArray)) {
@@ -1914,15 +1924,15 @@ public class LwjglRenderer implements Renderer {
             List<ByteBuffer> data = img.getData();
             
             // -1 index specifies prepare data for 2D Array
-            TextureUtil.uploadTexture(img, target, -1, 0);
+            TextureUtil.uploadTexture(img, target, -1, 0, linearizeSrgbImages);
             
             for (int i = 0; i < data.size(); i++) {
                 // upload each slice of 2D array in turn
                 // this time with the appropriate index
-                TextureUtil.uploadTexture(img, target, i, 0);
+                TextureUtil.uploadTexture(img, target, i, 0, linearizeSrgbImages);
             }
         } else {
-            TextureUtil.uploadTexture(img, target, 0, 0);
+            TextureUtil.uploadTexture(img, target, 0, 0, linearizeSrgbImages);
         }
 
         if (img.getMultiSamples() != imageSamples) {
@@ -1980,7 +1990,7 @@ public class LwjglRenderer implements Renderer {
 
     public void modifyTexture(Texture tex, Image pixels, int x, int y) {
       setTexture(0, tex);
-      TextureUtil.uploadSubTexture(pixels, convertTextureType(tex.getType(), pixels.getMultiSamples(), -1), 0, x, y);
+      TextureUtil.uploadSubTexture(pixels, convertTextureType(tex.getType(), pixels.getMultiSamples(), -1), 0, x, y, linearizeSrgbImages);
     }
 
     public void clearTextureUnits() {
@@ -2164,6 +2174,9 @@ public class LwjglRenderer implements Renderer {
         for (int i = 0; i < attribList.oldLen; i++) {
             int idx = attribList.oldList[i];
             glDisableVertexAttribArray(idx);
+            if (context.boundAttribs[idx].isInstanced()) {
+                ARBInstancedArrays.glVertexAttribDivisorARB(idx, 0);
+            }
             context.boundAttribs[idx] = null;
         }
         context.attribIndexList.copyNewToOld();
@@ -2196,15 +2209,32 @@ public class LwjglRenderer implements Renderer {
                     attrib.setLocation(loc);
                 }
             }
+            
+            int slotsRequired = 1;
+            if (vb.isInstanced()) {
+                if (!GLContext.getCapabilities().GL_ARB_instanced_arrays
+                 || !GLContext.getCapabilities().GL_ARB_draw_instanced) {
+                    throw new RendererException("Instancing is required, "
+                            + "but not supported by the "
+                            + "graphics hardware");
+                }
+                if (vb.getNumComponents() > 4 && vb.getNumComponents() % 4 != 0) {
+                    throw new RendererException("Number of components in multi-slot "
+                            + "buffers must be divisible by 4");
+                }
+                slotsRequired = vb.getNumComponents() / 4;
+            }
 
             if (vb.isUpdateNeeded() && idb == null) {
                 updateBufferData(vb);
             }
 
             VertexBuffer[] attribs = context.boundAttribs;
-            if (!context.attribIndexList.moveToNew(loc)) {
-                glEnableVertexAttribArray(loc);
-                //System.out.println("Enabled ATTRIB IDX: "+loc);
+            for (int i = 0; i < slotsRequired; i++) {
+                if (!context.attribIndexList.moveToNew(loc + i)) {
+                    glEnableVertexAttribArray(loc + i);
+                    //System.out.println("Enabled ATTRIB IDX: "+loc);
+                }
             }
             if (attribs[loc] != vb) {
                 // NOTE: Use id from interleaved buffer if specified
@@ -2218,14 +2248,43 @@ public class LwjglRenderer implements Renderer {
                     //statistics.onVertexBufferUse(vb, false);
                 }
 
-                glVertexAttribPointer(loc,
-                        vb.getNumComponents(),
-                        convertFormat(vb.getFormat()),
-                        vb.isNormalized(),
-                        vb.getStride(),
-                        vb.getOffset());
+                if (slotsRequired == 1) {
+                    glVertexAttribPointer(loc,
+                            vb.getNumComponents(),
+                            convertFormat(vb.getFormat()),
+                            vb.isNormalized(),
+                            vb.getStride(),
+                            vb.getOffset());
+                } else {
+                    for (int i = 0; i < slotsRequired; i++) {
+	 	 	// The pointer maps the next 4 floats in the slot.
+                        // E.g.
+                        // P1: XXXX____________XXXX____________
+                        // P2: ____XXXX____________XXXX________
+                        // P3: ________XXXX____________XXXX____
+                        // P4: ____________XXXX____________XXXX
+                        // stride = 4 bytes in float * 4 floats in slot * num slots
+                        // offset = 4 bytes in float * 4 floats in slot * slot index
+                        glVertexAttribPointer(loc + i,
+                                4,
+                                convertFormat(vb.getFormat()),
+                                vb.isNormalized(),
+                                4 * 4 * slotsRequired,
+                                4 * 4 * i);
+                    }
+                }
 
-                attribs[loc] = vb;
+                for (int i = 0; i < slotsRequired; i++) {
+                    int slot = loc + i;
+                    if (vb.isInstanced() && (attribs[slot] == null || !attribs[slot].isInstanced())) {
+                        // non-instanced -> instanced
+                        ARBInstancedArrays.glVertexAttribDivisorARB(slot, 1);
+                    } else if (!vb.isInstanced() && attribs[slot] != null && attribs[slot].isInstanced()) {
+                        // instanced -> non-instanced
+                        ARBInstancedArrays.glVertexAttribDivisorARB(slot, 0);
+                    }
+                    attribs[slot] = vb;
+                }
             }
         } else {
             throw new IllegalStateException("Cannot render mesh without shader bound");
@@ -2237,7 +2296,8 @@ public class LwjglRenderer implements Renderer {
     }
 
     public void drawTriangleArray(Mesh.Mode mode, int count, int vertCount) {
-        if (count > 1) {
+        boolean useInstancing = count > 1 && caps.contains(Caps.MeshInstancing);
+        if (useInstancing) {
             ARBDrawInstanced.glDrawArraysInstancedARB(convertElementMode(mode), 0,
                     vertCount, count);
         } else {
@@ -2346,7 +2406,7 @@ public class LwjglRenderer implements Renderer {
         }
     }
 
-    public void updateVertexArray(Mesh mesh) {
+    public void updateVertexArray(Mesh mesh, VertexBuffer instanceData) {
         int id = mesh.getId();
         if (id == -1) {
             IntBuffer temp = intBuf1;
@@ -2363,6 +2423,10 @@ public class LwjglRenderer implements Renderer {
         VertexBuffer interleavedData = mesh.getBuffer(Type.InterleavedData);
         if (interleavedData != null && interleavedData.isUpdateNeeded()) {
             updateBufferData(interleavedData);
+        }
+        
+        if (instanceData != null) {
+            setVertexAttrib(instanceData, null);
         }
 
         for (VertexBuffer vb : mesh.getBufferList().getArray()) {
@@ -2382,9 +2446,9 @@ public class LwjglRenderer implements Renderer {
         }
     }
 
-    private void renderMeshVertexArray(Mesh mesh, int lod, int count) {
+    private void renderMeshVertexArray(Mesh mesh, int lod, int count, VertexBuffer instanceData) {
         if (mesh.getId() == -1) {
-            updateVertexArray(mesh);
+            updateVertexArray(mesh, instanceData);
         } else {
             // TODO: Check if it was updated
         }
@@ -2410,25 +2474,25 @@ public class LwjglRenderer implements Renderer {
         clearTextureUnits();
     }
 
-    private void renderMeshDefault(Mesh mesh, int lod, int count) {
-        VertexBuffer indices;
-
+    private void renderMeshDefault(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
         VertexBuffer interleavedData = mesh.getBuffer(Type.InterleavedData);
         if (interleavedData != null && interleavedData.isUpdateNeeded()) {
             updateBufferData(interleavedData);
         }
 
-//        IntMap<VertexBuffer> buffers = mesh.getBuffers();
-//        SafeArrayList<VertexBuffer> buffersList = mesh.getBufferList();
-
+        VertexBuffer indices;
         if (mesh.getNumLodLevels() > 0) {
             indices = mesh.getLodLevel(lod);
         } else {
             indices = mesh.getBuffer(Type.Index);
         }
 
-//        for (Entry<VertexBuffer> entry : buffers) {
-//             VertexBuffer vb = entry.getValue();
+        if (instanceData != null) {
+            for (VertexBuffer vb : instanceData) {
+                setVertexAttrib(vb, null);
+            }
+        }
+        
         for (VertexBuffer vb : mesh.getBufferList().getArray()) {
             if (vb.getBufferType() == Type.InterleavedData
                     || vb.getUsage() == Usage.CpuOnly // ignore cpu-only buffers
@@ -2454,7 +2518,7 @@ public class LwjglRenderer implements Renderer {
         clearTextureUnits();
     }
 
-    public void renderMesh(Mesh mesh, int lod, int count) {
+    public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
         if (mesh.getVertexCount() == 0) {
             return;
         }
@@ -2485,7 +2549,21 @@ public class LwjglRenderer implements Renderer {
 //        if (GLContext.getCapabilities().GL_ARB_vertex_array_object){
 //            renderMeshVertexArray(mesh, lod, count);
 //        }else{
-        renderMeshDefault(mesh, lod, count);
+        renderMeshDefault(mesh, lod, count, instanceData);
 //        }
+    }
+
+    public void setMainFrameBufferSrgb(boolean srgb) {
+        //Gamma correction
+        if(srgb && caps.contains(Caps.Srgb)){
+            glEnable(GL30.GL_FRAMEBUFFER_SRGB);
+            logger.log(Level.FINER, "SRGB FrameBuffer enabled (Gamma Correction)");
+        }else{
+            glDisable(GL30.GL_FRAMEBUFFER_SRGB);
+        }         
+    }
+
+    public void setLinearizeSrgbImages(boolean linearize) {
+        linearizeSrgbImages = linearize;
     }
 }

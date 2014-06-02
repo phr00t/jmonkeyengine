@@ -8,6 +8,7 @@ import com.jme3.effect.ParticleMesh;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState.BlendMode;
@@ -18,6 +19,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.post.filters.BloomFilter;
 import com.jme3.post.filters.DepthOfFieldFilter;
+import com.jme3.post.filters.FXAAFilter;
 import com.jme3.post.filters.LightScatteringFilter;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.queue.RenderQueue.Bucket;
@@ -63,30 +65,32 @@ public class TestPostWater extends SimpleApplication {
 
         setDisplayFps(false);
         setDisplayStatView(false);
-
+        
         Node mainScene = new Node("Main Scene");
         rootNode.attachChild(mainScene);
 
         createTerrain(mainScene);
         DirectionalLight sun = new DirectionalLight();
         sun.setDirection(lightDir);
-        sun.setColor(ColorRGBA.White.clone().multLocal(1.7f));
+        sun.setColor(ColorRGBA.White.clone().multLocal(1f));
         mainScene.addLight(sun);
-
-        DirectionalLight l = new DirectionalLight();
-        l.setDirection(Vector3f.UNIT_Y.mult(-1));
-        l.setColor(ColorRGBA.White.clone().multLocal(0.3f));
-//        mainScene.addLight(l);
-
+        
+        AmbientLight al = new AmbientLight();
+        al.setColor(new ColorRGBA(0.1f, 0.1f, 0.1f, 1.0f));
+        mainScene.addLight(al);
+        
         flyCam.setMoveSpeed(50);
 
         //cam.setLocation(new Vector3f(-700, 100, 300));
         //cam.setRotation(new Quaternion().fromAngleAxis(0.5f, Vector3f.UNIT_Z));
-        cam.setLocation(new Vector3f(-327.21957f, 61.6459f, 126.884346f));
-        cam.setRotation(new Quaternion(0.052168474f, 0.9443102f, -0.18395276f, 0.2678024f));
+//        cam.setLocation(new Vector3f(-327.21957f, 61.6459f, 126.884346f));
+//        cam.setRotation(new Quaternion(0.052168474f, 0.9443102f, -0.18395276f, 0.2678024f));
 
 
-        cam.setRotation(new Quaternion().fromAngles(new float[]{FastMath.PI * 0.06f, FastMath.PI * 0.65f, 0}));
+        cam.setLocation(new Vector3f(-370.31592f, 182.04016f, 196.81192f));
+        cam.setRotation(new Quaternion(0.015302252f, 0.9304095f, -0.039101653f, 0.3641086f));
+
+
 
 
         Spatial sky = SkyFactory.createSky(assetManager, "Scenes/Beach/FullskiesSunset0068.dds", false);
@@ -94,49 +98,52 @@ public class TestPostWater extends SimpleApplication {
 
         mainScene.attachChild(sky);
         cam.setFrustumFar(4000);
-        //cam.setFrustumNear(100);
 
-
-
-        //private FilterPostProcessor fpp;
-
-
+        //Water Filter
         water = new WaterFilter(rootNode, lightDir);
-
-        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
-
-        fpp.addFilter(water);
-        BloomFilter bloom = new BloomFilter();
-        //bloom.getE
+        water.setWaterColor(new ColorRGBA().setAsSrgb(0.0078f, 0.3176f, 0.5f, 1.0f));
+        water.setDeepWaterColor(new ColorRGBA().setAsSrgb(0.0039f, 0.00196f, 0.145f, 1.0f));
+        water.setUnderWaterFogDistance(80);
+        water.setWaterTransparency(0.12f);
+        water.setFoamIntensity(0.4f);        
+        water.setFoamHardness(0.3f);
+        water.setFoamExistence(new Vector3f(0.8f, 8f, 1f));
+        water.setReflectionDisplace(50);
+        water.setRefractionConstant(0.25f);
+        water.setColorExtinction(new Vector3f(30, 50, 70));
+        water.setCausticsIntensity(0.4f);        
+        water.setWaveScale(0.003f);
+        water.setMaxAmplitude(2f);
+        water.setFoamTexture((Texture2D) assetManager.loadTexture("Common/MatDefs/Water/Textures/foam2.jpg"));
+        water.setRefractionStrength(0.2f);
+        water.setWaterHeight(initialWaterHeight);
+        
+        //Bloom Filter
+        BloomFilter bloom = new BloomFilter();        
         bloom.setExposurePower(55);
         bloom.setBloomIntensity(1.0f);
-        fpp.addFilter(bloom);
+        
+        //Light Scattering Filter
         LightScatteringFilter lsf = new LightScatteringFilter(lightDir.mult(-300));
-        lsf.setLightDensity(1.0f);
-        fpp.addFilter(lsf);
+        lsf.setLightDensity(0.5f);   
+        
+        //Depth of field Filter
         DepthOfFieldFilter dof = new DepthOfFieldFilter();
         dof.setFocusDistance(0);
         dof.setFocusRange(100);
+        
+        FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
+        
+        fpp.addFilter(water);
+        fpp.addFilter(bloom);
         fpp.addFilter(dof);
-//        
-
-        //   fpp.addFilter(new TranslucentBucketFilter());
-        //       
-
-        // fpp.setNumSamples(4);
-
-
-        water.setWaveScale(0.003f);
-        water.setMaxAmplitude(2f);
-        water.setFoamExistence(new Vector3f(1f, 4, 0.5f));
-        water.setFoamTexture((Texture2D) assetManager.loadTexture("Common/MatDefs/Water/Textures/foam2.jpg"));
-        //water.setNormalScale(0.5f);
-
-        //water.setRefractionConstant(0.25f);
-        water.setRefractionStrength(0.2f);
-        //water.setFoamHardness(0.6f);
-
-        water.setWaterHeight(initialWaterHeight);
+        fpp.addFilter(lsf);
+        fpp.addFilter(new FXAAFilter());
+        
+//      fpp.addFilter(new GammaCorrectionFilter());
+//      fpp.addFilter(new TranslucentBucketFilter());
+//      fpp.setNumSamples(4);    
+        
         uw = cam.getLocation().y < waterHeight;
 
         waves = new AudioNode(assetManager, "Sound/Environment/Ocean Waves.ogg", false);
@@ -181,7 +188,7 @@ public class TestPostWater extends SimpleApplication {
         inputManager.addMapping("upRM", new KeyTrigger(KeyInput.KEY_PGUP));
         inputManager.addMapping("downRM", new KeyTrigger(KeyInput.KEY_PGDN));
 //        createBox();
-        //  createFire();
+//        createFire();
     }
     Geometry box;
 
@@ -231,9 +238,9 @@ public class TestPostWater extends SimpleApplication {
         fire.setLowLife(0.5f);
         fire.setHighLife(1.5f);
         fire.getParticleInfluencer().setVelocityVariation(0.3f);
-        fire.setLocalTranslation(-350, 40, 430);
+        fire.setLocalTranslation(-600, 50, 300);
 
-        fire.setQueueBucket(Bucket.Transparent);
+        fire.setQueueBucket(Bucket.Translucent);
         rootNode.attachChild(fire);
     }
 

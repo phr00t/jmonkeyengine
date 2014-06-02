@@ -2362,7 +2362,7 @@ public class OGLESShaderRenderer implements Renderer {
         clearTextureUnits();
     }
 
-    public void renderMesh(Mesh mesh, int lod, int count) {
+    public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
         if (mesh.getVertexCount() == 0) {
             return;
         }
@@ -2531,5 +2531,13 @@ public class OGLESShaderRenderer implements Renderer {
         context.reset();
         boundShader = null;
         lastFb = null;
+    }
+
+    public void setMainFrameBufferSrgb(boolean srgb) {
+        //TODO once opglES3.0 is supported maybe....        
+    }
+
+    public void setLinearizeSrgbImages(boolean linearize) {
+        //TODO once opglES3.0 is supported maybe....        
     }
 }

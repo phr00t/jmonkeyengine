@@ -3,8 +3,7 @@ MaterialDef GammaCorrection {
     MaterialParameters {
         Int NumSamples
         Texture2D Texture
-        Float gamma
-        Boolean computeLuma
+        Float InvGamma       
     }
  
     Technique {
@@ -14,8 +13,8 @@ MaterialDef GammaCorrection {
         WorldParameters {
         }
         
-        Defines {
-            COMPUTE_LUMA : computeLuma
+        Defines { 
+            RESOLVE_MS : NumSamples
         }
     }
  
@@ -26,8 +25,7 @@ MaterialDef GammaCorrection {
         WorldParameters {
         }
         
-         Defines {
-            COMPUTE_LUMA : computeLuma
+         Defines {            
         }
     }
 }

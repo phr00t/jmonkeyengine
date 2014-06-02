@@ -806,15 +806,9 @@ public class JoglGL1Renderer implements GL1Renderer {
         }
 
         // Check sizes if graphics card doesn't support NPOT
-        if (!gl.isExtensionAvailable("GL_ARB_texture_non_power_of_two")) {
-            if (img.getWidth() != 0 && img.getHeight() != 0) {
-                if (!FastMath.isPowerOfTwo(img.getWidth())
-                        || !FastMath.isPowerOfTwo(img.getHeight())) {
-
-                    // Resize texture to Power-of-2 size
-                    MipMapGenerator.resizeToPowerOf2(img);
-                }
-            }
+        if (!gl.isExtensionAvailable("GL_ARB_texture_non_power_of_two") && img.isNPOT()) {
+            // Resize texture to Power-of-2 size
+            MipMapGenerator.resizeToPowerOf2(img);
         }
 
         if (!img.hasMipmaps() && img.isGeneratedMipmapsRequired()) {
@@ -856,7 +850,7 @@ public class JoglGL1Renderer implements GL1Renderer {
         TextureUtil.uploadTexture(img, target, i, 0, tdc);
         }
         } else {*/
-        TextureUtil.uploadTexture(img, target, 0, 0);
+        TextureUtil.uploadTexture(img, target, 0, 0,false);
         //}
 
         img.clearUpdateNeeded();
@@ -908,7 +902,7 @@ public class JoglGL1Renderer implements GL1Renderer {
 
     public void modifyTexture(Texture tex, Image pixels, int x, int y) {
       setTexture(0, tex);
-      TextureUtil.uploadSubTexture(pixels, convertTextureType(tex.getType()), 0, x, y);
+      TextureUtil.uploadSubTexture(pixels, convertTextureType(tex.getType()), 0, x, y, false);
     }
 
     private void clearTextureUnits() {
@@ -1181,7 +1175,7 @@ public class JoglGL1Renderer implements GL1Renderer {
         resetFixedFuncBindings();
     }
 
-    public void renderMesh(Mesh mesh, int lod, int count) {
+    public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
         if (mesh.getVertexCount() == 0) {
             return;
         }
@@ -1257,5 +1251,11 @@ public class JoglGL1Renderer implements GL1Renderer {
     }
 
     public void deleteBuffer(VertexBuffer vb) {
+    }
+
+    public void setMainFrameBufferSrgb(boolean srgb) {        
+    }
+
+    public void setLinearizeSrgbImages(boolean linearize) {
     }
 }

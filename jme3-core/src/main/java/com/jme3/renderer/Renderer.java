@@ -39,6 +39,7 @@ import com.jme3.scene.Mesh;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.shader.Shader;
 import com.jme3.shader.Shader.ShaderSource;
+import com.jme3.system.AppSettings;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
@@ -267,18 +268,23 @@ public interface Renderer {
     public void deleteBuffer(VertexBuffer vb);
 
     /**
-     * Renders <code>count</code> meshes, with the geometry data supplied.
+     * Renders <code>count</code> meshes, with the geometry data supplied and
+     * per-instance data supplied.
      * The shader which is currently set with <code>setShader</code> is
-     * responsible for transforming the input verticies into clip space
+     * responsible for transforming the input vertices into clip space
      * and shading it based on the given vertex attributes.
-     * The int variable gl_InstanceID can be used to access the current
+     * The integer variable gl_InstanceID can be used to access the current
      * instance of the mesh being rendered inside the vertex shader.
+     * If the instance data is non-null, then it is submitted as a
+     * per-instance vertex attribute to the shader.
      *
      * @param mesh The mesh to render
      * @param lod The LOD level to use, see {@link Mesh#setLodLevels(com.jme3.scene.VertexBuffer[]) }.
      * @param count Number of mesh instances to render
+     * @param instanceData When count is greater than 1, these buffers provide
+     *                     the per-instance attributes.
      */
-    public void renderMesh(Mesh mesh, int lod, int count);
+    public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData);
 
     /**
      * Resets all previously used {@link NativeObject Native Objects} on this Renderer.
@@ -313,4 +319,52 @@ public interface Renderer {
      * </p>
      */
     public void setAlphaToCoverage(boolean value);
+    
+      /**
+      * If enabled, color values rendered to the main framebuffer undergo 
+      * linear -&gt; sRGB conversion.
+      * 
+      * This is identical to {@link FrameBuffer#setSrgb(boolean)} except it is toggled
+      * for the main framebuffer instead of an offscreen buffer.
+      *
+      * This should be set together with {@link Renderer#setLinearizeSrgbImages(boolean)}
+      *
+      * As a shorthand, the user can set {@link AppSettings#setGammaCorrection(boolean)} to true
+      * to toggle both {@link Renderer#setLinearizeSrgbImages(boolean)} and
+      * {@link Renderer#setMainFrameBufferSrgb(boolean)} if the 
+      * {@link Caps#Srgb} is supported by the GPU.
+      *
+      * @throws RendererException If the GPU hardware does not support sRGB.
+      *
+      * @see FrameBuffer#setSrgb(boolean)
+      * @see Caps#Srgb
+      */
+     public void setMainFrameBufferSrgb(boolean srgb);
+     
+       /**
+      * If enabled, all {@link Image images} with the {@link Image#setColorSpace(com.jme3.texture.image.ColorSpace) sRGB flag}
+      * set shall undergo an sRGB to linear RGB color conversion when read by a shader.
+      *
+      * The conversion is performed for the following formats:
+      *  - {@link Image.Format#RGB8}
+      *  - {@link Image.Format#RGBA8}
+      *  - {@link Image.Format#Luminance8}
+      *  - {@link Image.Format#Luminance8Alpha8}
+      *  - {@link Image.Format#DXT1}
+      *  - {@link Image.Format#DXT1A}
+      *  - {@link Image.Format#DXT3}
+      *  - {@link Image.Format#DXT5}
+      * 
+      * For all other formats, no conversion is performed.
+      *
+      * If this option is toggled at runtime, textures must be reloaded for the change to take effect.
+      *
+      * @throws RendererException If the GPU hardware does not support sRGB.
+      *
+      * @param linearize If sRGB images undergo sRGB -&gt; linear conversion prior to rendering.
+      *
+      * @see Caps#Srgb
+      */
+     public void setLinearizeSrgbImages(boolean linearize);
+
 }

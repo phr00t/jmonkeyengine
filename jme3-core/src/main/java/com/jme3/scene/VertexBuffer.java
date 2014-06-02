@@ -84,11 +84,12 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
          */
         Color,
 
-        /**
-         * Tangent vector, normalized (4 floats) (x,y,z,w)
-         * the w component is called the binormal parity, is not normalized and is either 1f or -1f
-         * It's used to compuste the direction on the binormal verctor on the GPU at render time.
-         */
+	/**
+	 * Tangent vector, normalized (4 floats) (x,y,z,w). The w component is
+	 * called the binormal parity, is not normalized, and is either 1f or
+	 * -1f. It's used to compute the direction on the binormal vector on the
+	 * GPU at render time.
+	 */
         Tangent,
 
         /**
@@ -205,6 +206,14 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
          * either an int or float buffer due to shader attribute types restrictions.
          */
         HWBoneIndex,
+        
+        /**
+	 * Information about this instance.
+         * 
+	 * Format should be {@link Format#Float} and number of components
+	 * should be 16.
+	 */
+	InstanceData
     }
 
     /**
@@ -324,6 +333,7 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
     protected Type bufType;
     protected Format format;
     protected boolean normalized = false;
+    protected transient boolean instanced = false;
     protected transient boolean dataSizeChanged = false;
 
     /**
@@ -364,10 +374,14 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
             throw new AssertionError();
         }
         // Are components between 1 and 4?
-        if (components < 1 || components > 4) {
-            throw new AssertionError();
-        }
         
+        // Are components between 1 and 4 and not InstanceData?
+        if (bufType != Type.InstanceData) {
+            if (components < 1 || components > 4) {
+                throw new AssertionError();
+            }
+        }
+
         // Does usage comply with buffer directness?
         //if (usage == Usage.CpuOnly && data.isDirect()) {
         //    throw new AssertionError();
@@ -531,6 +545,17 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
     }
 
     /**
+     * TODO:
+     */
+    public void setInstanced(boolean instanced) {
+        this.instanced = instanced;
+    }
+
+    public boolean isInstanced() {
+        return instanced;
+    }
+    
+    /**
      * @return The type of information that this buffer has.
      */
     public Type getBufferType(){
@@ -584,9 +609,12 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
         if (data.isReadOnly()) 
             throw new IllegalArgumentException( "VertexBuffer data cannot be read-only." );
 
-        if (components < 1 || components > 4)
-            throw new IllegalArgumentException("components must be between 1 and 4");
-
+        if (bufType != Type.InstanceData) {
+            if (components < 1 || components > 4) {
+                throw new IllegalArgumentException("components must be between 1 and 4");
+            }
+        }
+        
         this.data = data;
         this.components = components;
         this.usage = usage;
@@ -981,6 +1009,7 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
         vb.handleRef = new Object();
         vb.id = -1;
         vb.normalized = normalized;
+        vb.instanced = instanced;
         vb.offset = offset;
         vb.stride = stride;
         vb.updateNeeded = true;
@@ -1029,7 +1058,12 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
         return ((long)OBJTYPE_VERTEXBUFFER << 32) | ((long)id);
     }
     
+    @Override
     public void write(JmeExporter ex) throws IOException {
+        if (instanced) {
+            throw new IOException("Serialization of instanced data not allowed");
+        }
+        
         OutputCapsule oc = ex.getCapsule(this);
         oc.write(components, "components", 0);
         oc.write(usage, "usage", Usage.Dynamic);
@@ -1063,6 +1097,7 @@ public class VertexBuffer extends NativeObject implements Savable, Cloneable {
         }
     }
 
+    @Override
     public void read(JmeImporter im) throws IOException {
         InputCapsule ic = im.getCapsule(this);
         components = ic.readInt("components", 0);

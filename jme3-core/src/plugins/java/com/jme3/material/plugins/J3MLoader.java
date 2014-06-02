@@ -44,6 +44,7 @@ import com.jme3.shader.VarType;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture.WrapMode;
 import com.jme3.texture.Texture2D;
+import com.jme3.texture.image.ColorSpace;
 import com.jme3.util.PlaceholderAssets;
 import com.jme3.util.blockparser.BlockLanguageParser;
 import com.jme3.util.blockparser.Statement;
@@ -139,7 +140,17 @@ public class J3MLoader implements AssetLoader {
             }
 
             TextureKey texKey = new TextureKey(texturePath, flipY);
-            texKey.setAsCube(type == VarType.TextureCubeMap);
+            switch (type) {
+                case Texture3D:
+                    texKey.setTextureTypeHint(Texture.Type.ThreeDimensional);
+                    break;
+                case TextureArray:
+                    texKey.setTextureTypeHint(Texture.Type.TwoDimensionalArray);
+                    break;
+                case TextureCubeMap:
+                    texKey.setTextureTypeHint(Texture.Type.CubeMap);
+                    break;
+            }
             texKey.setGenerateMips(true);
 
             Texture tex;
@@ -152,14 +163,14 @@ public class J3MLoader implements AssetLoader {
             if (tex != null){
                 if (repeat){
                     tex.setWrap(WrapMode.Repeat);
-                }
+                }                
             }else{
                 tex = new Texture2D(PlaceholderAssets.getPlaceholderImage());
                 if (repeat){
                     tex.setWrap(WrapMode.Repeat);
                 }
                 tex.setKey(texKey);
-            }
+            }         
             return tex;
         }else{
             String[] split = value.trim().split(whitespacePattern);
@@ -206,13 +217,22 @@ public class J3MLoader implements AssetLoader {
         }
     }
     
-    // <TYPE> <NAME> [ "(" <FFBINDING> ")" ] [ ":" <DEFAULTVAL> ]
+    // <TYPE> <NAME> [ "(" <FFBINDING> ")" ] [ ":" <DEFAULTVAL> ] [-LINEAR]
     private void readParam(String statement) throws IOException{
         String name;
         String defaultVal = null;
         FixedFuncBinding ffBinding = null;
+        ColorSpace colorSpace = null;
         
-        String[] split = statement.split(":");
+        String[] split = statement.split("-");
+        if(split.length>1){
+            if(split[1].equalsIgnoreCase("LINEAR")){
+                colorSpace = ColorSpace.Linear;
+            }
+            statement = split[0].trim();
+        }
+        
+        split = statement.split(":");
         
         // Parse default val
         if (split.length == 1){
@@ -259,8 +279,12 @@ public class J3MLoader implements AssetLoader {
         if (defaultVal != null){ 
             defaultValObj = readValue(type, defaultVal);
         }
+        if(type.isTextureType()){
+            materialDef.addMaterialParamTexture(type, name, colorSpace);    
+        }else{
+            materialDef.addMaterialParam(type, name, defaultValObj, ffBinding);
+        }
         
-        materialDef.addMaterialParam(type, name, defaultValObj, ffBinding);
     }
 
     private void readValueParam(String statement) throws IOException{

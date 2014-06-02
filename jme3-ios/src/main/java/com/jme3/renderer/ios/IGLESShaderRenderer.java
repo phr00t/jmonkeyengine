@@ -936,7 +936,7 @@ public class IGLESShaderRenderer implements Renderer {
      * @param lod The LOD level to use, see {@link Mesh#setLodLevels(com.jme3.scene.VertexBuffer[]) }.
      * @param count Number of mesh instances to render
      */
-    public void renderMesh(Mesh mesh, int lod, int count) {
+    public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
         logger.log(Level.FINE, "IGLESShaderRenderer renderMesh");
         if (mesh.getVertexCount() == 0) {
         	return;
@@ -2572,4 +2572,12 @@ public class IGLESShaderRenderer implements Renderer {
 				throw new UnsupportedOperationException("Unrecognized test function: " + testFunc);
 		}
 	}    	
+
+    public void setMainFrameBufferSrgb(boolean srgb) {
+        
+    }
+
+    public void setLinearizeSrgbImages(boolean linearize) {
+      
+    }
 }

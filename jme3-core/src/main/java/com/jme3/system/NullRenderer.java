@@ -137,7 +137,7 @@ public class NullRenderer implements Renderer {
     public void deleteBuffer(VertexBuffer vb) {
     }
 
-    public void renderMesh(Mesh mesh, int lod, int count) {
+    public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
     }
 
     public void resetGLObjects() {
@@ -150,6 +150,12 @@ public class NullRenderer implements Renderer {
     }
 
     public void setAlphaToCoverage(boolean value) {
+    }
+
+    public void setMainFrameBufferSrgb(boolean srgb) {     
+    }
+
+    public void setLinearizeSrgbImages(boolean linearize) {    
     }
 
 }
