@@ -65,8 +65,7 @@ public class LwjglOffscreenBuffer extends LwjglContext implements Runnable {
                                       0,
                                       settings.getDepthBits(),
                                       settings.getStencilBits(),
-                                      samples)
-                            .withSRGB(settings.getGammaCorrection());
+                                      samples);
         
         width = settings.getWidth();
         height = settings.getHeight();
@@ -146,6 +145,7 @@ public class LwjglOffscreenBuffer extends LwjglContext implements Runnable {
     }
 
     public void run(){
+        loadNatives();
         logger.log(Level.FINE, "Using LWJGL {0}", Sys.getVersion());
         initInThread();
         while (!needClose.get()){
