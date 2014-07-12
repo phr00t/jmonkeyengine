@@ -244,6 +244,10 @@ public class RigidBodyControl extends PhysicsRigidBody implements PhysicsControl
         this.space = space;
     }
 
+    public boolean isAdded() {
+        return added;
+    }
+    
     public PhysicsSpace getPhysicsSpace() {
         return space;
     }
