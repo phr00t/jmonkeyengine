@@ -319,9 +319,9 @@ class Letters {
     
     void validateSize() {
         if (totalWidth < 0) {
+            totalWidth = Math.abs(head.getX1() - tail.getPrevious().getX1());
             LetterQuad l = head;
             while (!l.isTail()) {
-                totalWidth = Math.max(totalWidth, l.getX1());
                 l = l.getNext();
                 totalHeight = Math.max(totalHeight, -l.getY1());
             }
