@@ -104,7 +104,9 @@ public class NavMesh implements Savable {
      * it is within the max_height of the navmesh on the floor
      */
     public Cell findInsideCell(Vector3f point, float max_height) {
-        for(Cell cell : cellList) {
+        //for(Cell cell : cellList) {
+        for(int i=0;i<cellList.size();i++) {
+            Cell cell = cellList.get(i);
             if( cell.contains(point) && point.y - cell.getHeightOnCell(point) < max_height ) {
                 return cell;
             }

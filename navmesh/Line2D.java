@@ -182,10 +182,10 @@ public class Line2D implements Savable {
     }
 */
     // this works much more correctly
-    public PointSide getSide(Vector2f c, float epsilon) {
+    public PointSide getSide(float x, float y, float epsilon) {
         Vector2f a = pointA;
         Vector2f b = pointB;
-        float res = ((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x));
+        float res = ((b.x - a.x)*(y - a.y) - (b.y - a.y)*(x - a.x));
         if (res > 0)
             return PointSide.Left;
         else if (res == 0)
@@ -334,15 +334,15 @@ public class Line2D implements Savable {
             System.out.println("Failed intersection verrification");
         }
 
-        if (a.getSide(new Vector2f(0, 1), 0.0f) != PointSide.Left) {
+        if (a.getSide(0f, 1f, 0.0f) != PointSide.Left) {
             System.out.println("Failed left test");
         }
 
-        if (a.getSide(new Vector2f(0, -1), 0.0f) != PointSide.Right) {
+        if (a.getSide(0f, -1f, 0.0f) != PointSide.Right) {
             System.out.println("Failed right test");
         }
 
-        if (a.getSide(new Vector2f(0, 0), 0.0f) != PointSide.OnLine) {
+        if (a.getSide(0f, 0f, 0.0f) != PointSide.OnLine) {
             System.out.println("Failed on line test");
         }
     }

@@ -22,6 +22,7 @@
 package navmesh;
 
 import Extras.Helpers;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -172,7 +173,7 @@ public final class OpenHeightfield
                     int index = gridIndex(widthIndex, depthIndex);
                     
                     if( index >= 0 ) {
-                        OpenHeightSpan span = mSpans.get(Helpers.GetInt(index));
+                        OpenHeightSpan span = mSpans[index];
                     
                         if (span != null)
                         {
@@ -218,8 +219,9 @@ public final class OpenHeightfield
      * Key = Grid index from {@link #gridIndex(int, int)}.
      * Value = The first (lowest) span in the grid column.
      */
-    private final Hashtable<Integer, OpenHeightSpan> mSpans =
-        new Hashtable<Integer, OpenHeightSpan>();
+    //private final Hashtable<Integer, OpenHeightSpan> mSpans =
+    //    new Hashtable<Integer, OpenHeightSpan>();
+    private final OpenHeightSpan mSpans[] = new OpenHeightSpan[85000];
     
     /**
      * Constructor
@@ -259,7 +261,7 @@ public final class OpenHeightfield
             , int depthIndex
             , OpenHeightSpan span)
     {
-        return mSpans.put(gridIndex(widthIndex, depthIndex), span);
+        return mSpans[gridIndex(widthIndex, depthIndex)] = span;
     }
     
     /**
@@ -296,7 +298,7 @@ public final class OpenHeightfield
     {
         int gridindex = gridIndex(widthIndex, depthIndex);
         if( gridindex < 0 ) return null;
-        return mSpans.get(Helpers.GetInt(gridindex));
+        return mSpans[gridindex];
     }
     
     /**

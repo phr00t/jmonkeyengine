@@ -21,6 +21,7 @@
  */
 package navmesh;
 
+import Extras.Helpers;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -2093,8 +2094,8 @@ public final class DetailMeshBuilder
             if (selectedSpan != null)
             {
                 // Found a span for this vertex.  Push in onto the stack.
-                gridIndexStack.push(widthDepth[0]);
-                gridIndexStack.push(widthDepth[1]);
+                gridIndexStack.push(Helpers.GetInt(widthDepth[0]));
+                gridIndexStack.push(Helpers.GetInt(widthDepth[1]));
                 spanStack.push(selectedSpan);
             }
         }
@@ -2158,8 +2159,8 @@ public final class DetailMeshBuilder
                     continue;
                 
                 // Need to process this neighbor.
-                gridIndexStack.push(nWidthIndex);
-                gridIndexStack.push(nDepthIndex);
+                gridIndexStack.push(Helpers.GetInt(nWidthIndex));
+                gridIndexStack.push(Helpers.GetInt(nDepthIndex));
                 spanStack.push(nSpan);
                 
             }

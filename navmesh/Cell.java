@@ -286,14 +286,13 @@ public class Cell implements Savable {
      * @param point
      * @return
      */
-    public boolean contains(Vector2f point) {
+    public boolean contains(float x, float y) {
         // we are "in" the cell if we are on the right hand side of all edge
         // lines of the cell
         int InteriorCount = 0;
 
         for (int i = 0; i < 3; i++) {
-            Line2D.PointSide SideResult = sides[i].getSide(
-                    point, 1.0e-6f);
+            Line2D.PointSide SideResult = sides[i].getSide(x, y, 1.0e-6f);
 
             if (SideResult != Line2D.PointSide.Left) {
                 InteriorCount++;
@@ -313,7 +312,7 @@ public class Cell implements Savable {
      * @return
      */
     public boolean contains(Vector3f point) {
-        return (contains(new Vector2f(point.x, point.z)));
+        return contains(point.x, point.z);
     }
 
     public Vector3f getVertex(int Vert) {
@@ -389,13 +388,12 @@ public class Cell implements Savable {
 
             // If the destination endpoint of the MotionPath
             // is Not on the right side of this wall...
-            Line2D.PointSide end = sides[i].getSide(
-                    MotionPath.getPointB(), 0.0f);
+            Line2D.PointSide end = sides[i].getSide(MotionPath.getPointB().x, MotionPath.getPointB().y, 0.0f);
             if (end == Line2D.PointSide.Left){//(end != Line2D.PointSide.Right) {
 //					&& end != Line2D.POINT_CLASSIFICATION.ON_LINE) {
                 // ..and the starting endpoint of the MotionPath
                 // is Not on the left side of this wall...
-                if (sides[i].getSide(MotionPath.getPointA(), 0.0f) != Line2D.PointSide.Left) {
+                if (sides[i].getSide(MotionPath.getPointA().x, MotionPath.getPointA().y, 0.0f) != Line2D.PointSide.Left) {
                     // Check to see if we intersect the wall
                     // using the Intersection function of Line2D
                     Line2D.LineIntersect IntersectResult = MotionPath.intersect(sides[i], result.intersection);

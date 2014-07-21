@@ -60,6 +60,13 @@ public final class HeightSpan
         mFlags = flags;
     }
     
+    public void prepareHeightSpan(int min, int max, int flags) {
+        mMinimum = min;
+        mMaximum = max;
+        mFlags = flags;
+        mNext = null;
+    }
+    
     /**
      * The flags for the span.
      * @return The flags for the span.

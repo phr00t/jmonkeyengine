@@ -158,8 +158,7 @@ public final class SolidHeightfield
                                 ; widthIndex < width()
                                 ; widthIndex++)
                 {
-                    HeightSpan span =
-                        mSpans.get(gridIndex(widthIndex, depthIndex));
+                    HeightSpan span = mSpans[gridIndex(widthIndex, depthIndex)];
                     if (span != null)
                     {
                         // A new base span was found.  Select it.
@@ -184,8 +183,10 @@ public final class SolidHeightfield
      * Value: The lowest span at the grid location, or null if there are no
      * spans at the grid location.</p>
      */
-    private final Hashtable<Integer, HeightSpan> mSpans =
-        new Hashtable<Integer, HeightSpan>();
+    //private final Hashtable<Integer, HeightSpan> mSpans =
+    //    new Hashtable<Integer, HeightSpan>();
+    private final HeightSpan mSpans[] = new HeightSpan[128000];
+    private boolean hasSpans = false;
     
     /**
      * Constructor
@@ -258,22 +259,23 @@ public final class SolidHeightfield
         
         // Find the grid location of the span and get existing data for the
         // location.        
-        int gi = gridIndex(widthIndex, depthIndex);
-        Integer gridIndex;
+        int gridIndex = gridIndex(widthIndex, depthIndex);
+        /*Integer gridIndex;
         if( gi >= 0 ) {
             gridIndex = Helpers.GetInt(gi);
         } else {
             gridIndex = null;
-        }
-        HeightSpan currentSpan = mSpans.get(gridIndex);
+        }*/
+        HeightSpan currentSpan = mSpans[gridIndex];
         
         if (currentSpan == null)
         {
             // This is the first span for this grid location.
             // Generate a new span.
-            mSpans.put(gridIndex, new HeightSpan(heightIndexMin
+            mSpans[gridIndex] = new HeightSpan(heightIndexMin
                             , heightIndexMax
-                            , flags));
+                            , flags);
+            hasSpans = true;
             return true;
         }
         
@@ -302,14 +304,16 @@ public final class SolidHeightfield
                                 , flags);
                 // Insert this span below the current span.
                 newSpan.setNext(currentSpan);
-                if (previousSpan == null)
+                if (previousSpan == null) {
                     // The new span is the new first span in this column.
                     // Insert it at the base of this column.
-                    mSpans.put(gridIndex, newSpan);
-                else
+                    mSpans[gridIndex] = newSpan;
+                    hasSpans = true;
+                } else {
                     // The new span is between two spans.
                     // Link the previous span to the new span.
                     previousSpan.setNext(newSpan);
+                }
                 return true;
             }
             else if (currentSpan.max() < heightIndexMin - 1)
@@ -437,7 +441,7 @@ public final class SolidHeightfield
      */
     public HeightSpan getData(int widthIndex, int depthIndex)
     {
-        return mSpans.get(gridIndex(widthIndex, depthIndex));
+        return mSpans[gridIndex(widthIndex, depthIndex)];
     }
     
     /**
@@ -445,6 +449,6 @@ public final class SolidHeightfield
      * returned, then the field does not contain any obstructed  space.
      * @return TRUE if the field contains spans.  Otherwise FALSE.
      */
-    public boolean hasSpans() { return (mSpans.size() > 0); }
+    public boolean hasSpans() { return hasSpans; }
     
 }
