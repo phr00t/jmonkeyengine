@@ -41,7 +41,7 @@ import java.util.LinkedList;
  * Manage and align LetterQuads
  * @author YongHoon
  */
-class Letters {
+public class Letters {
     private final LetterQuad head;
     private final LetterQuad tail;
     private final BitmapFont font;
@@ -96,11 +96,11 @@ class Letters {
         invalidate();
     }
 
-    LetterQuad getHead() {
+    public LetterQuad getHead() {
         return head;
     }
 
-    LetterQuad getTail() {
+    public LetterQuad getTail() {
         return tail;
     }
     

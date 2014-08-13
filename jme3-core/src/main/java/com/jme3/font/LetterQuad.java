@@ -40,7 +40,7 @@ import java.nio.ShortBuffer;
  * LetterQuad contains the position, color, and UV texture information for a character in text.
  * @author YongHoon
  */
-class LetterQuad {
+public class LetterQuad {
     private static final Rectangle UNBOUNDED = new Rectangle(0, 0, Float.MAX_VALUE, Float.MAX_VALUE);
     private static final float LINE_DIR = -1;
 
@@ -136,15 +136,15 @@ class LetterQuad {
         return u0;
     }
 
-    float getU1() {
+    public float getU1() {
         return u1;
     }
 
-    float getV0() {
+    public float getV0() {
         return v0;
     }
 
-    float getV1() {
+    public float getV1() {
         return v1;
     }
     
@@ -190,15 +190,15 @@ class LetterQuad {
         width = newWidth;  
     }
     
-    float getX0() {
+    public float getX0() {
         return x0;
     }
 
-    float getX1() {
+    public float getX1() {
         return x0+width;
     }
     
-    float getNextX() {
+    public float getNextX() {
         return x0+xAdvance;
     }
     
@@ -206,19 +206,19 @@ class LetterQuad {
         return lineY+LINE_DIR*font.getCharSet().getLineHeight() * sizeScale;
     }
 
-    float getY0() {
+    public float getY0() {
         return y0;
     }
 
-    float getY1() {
+    public float getY1() {
         return y0-height;
     }
     
-    float getWidth() {
+    public float getWidth() {
         return width;
     }
     
-    float getHeight() {
+    public float getHeight() {
         return height;
     }
 

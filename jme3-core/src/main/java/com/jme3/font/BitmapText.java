@@ -36,6 +36,7 @@ import com.jme3.font.BitmapFont.VAlign;
 import com.jme3.material.MatParam;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.renderer.RenderManager;
 import com.jme3.scene.Node;
 import java.util.regex.Matcher;
@@ -253,6 +254,13 @@ public class BitmapText extends Node {
             assemble();
         }
         return letters.getTotalWidth();        
+    }
+    
+    public Letters getLetters() {
+        if (needRefresh) {
+            assemble();
+        }
+        return letters;
     }
     
     /**
