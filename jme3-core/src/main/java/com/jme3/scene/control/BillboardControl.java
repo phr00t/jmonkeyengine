@@ -213,7 +213,7 @@ public class BillboardControl extends AbstractControl {
         // the model space of the billboard.
         look.set(camera.getLocation()).subtractLocal(
                 spatial.getWorldTranslation());   
-        spatial.getParent().getWorldRotation().mult(look, left); // coopt left for our own
+        spatial.getParent().getWorldRotation().mult(look, left); // coopt left for our own        
         // purposes.
         left.x *= 1.0f / spatial.getWorldScale().x;
         left.y *= 1.0f / spatial.getWorldScale().y;
