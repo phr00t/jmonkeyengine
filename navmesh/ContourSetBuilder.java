@@ -246,7 +246,7 @@ public final class ContourSetBuilder
                     + " regions.");
         }
         
-        if (result.size() + discardedContours !=
+        /*if (result.size() + discardedContours !=
             sourceField.regionCount() - 1)
         {
             /*
@@ -271,7 +271,7 @@ public final class ContourSetBuilder
             // Not reporting missing contours since those are sometimes
             // expected and already reported.
             
-            for (int regionID = 1
+            /*for (int regionID = 1
                     ; regionID < sourceField.regionCount()
                     ; regionID++)
             {
@@ -315,7 +315,7 @@ public final class ContourSetBuilder
                     + " (Actual: " + result.size()
                     + ", Discarded: " + discardedContours + ")");
             return null;
-        }
+        }*/
         
         return result;
         

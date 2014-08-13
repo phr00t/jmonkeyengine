@@ -268,6 +268,8 @@ public class NavMesh implements Savable {
         
         clear();
        
+        if( mesh == null ) return;
+        
         Vector3f a = new Vector3f();
         Vector3f b = new Vector3f();
         Vector3f c = new Vector3f();

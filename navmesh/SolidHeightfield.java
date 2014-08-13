@@ -22,6 +22,8 @@
 package navmesh;
 
 import Extras.Helpers;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -158,7 +160,7 @@ public final class SolidHeightfield
                                 ; widthIndex < width()
                                 ; widthIndex++)
                 {
-                    HeightSpan span = mSpans[gridIndex(widthIndex, depthIndex)];
+                    HeightSpan span = mSpans.get(gridIndex(widthIndex, depthIndex));
                     if (span != null)
                     {
                         // A new base span was found.  Select it.
@@ -185,7 +187,7 @@ public final class SolidHeightfield
      */
     //private final Hashtable<Integer, HeightSpan> mSpans =
     //    new Hashtable<Integer, HeightSpan>();
-    private final HeightSpan mSpans[] = new HeightSpan[128000];
+    private final TIntObjectHashMap<HeightSpan> mSpans = new TIntObjectHashMap<>();
     private boolean hasSpans = false;
     
     /**
@@ -266,15 +268,13 @@ public final class SolidHeightfield
         } else {
             gridIndex = null;
         }*/
-        HeightSpan currentSpan = mSpans[gridIndex];
+        HeightSpan currentSpan = mSpans.get(gridIndex);
         
         if (currentSpan == null)
         {
             // This is the first span for this grid location.
             // Generate a new span.
-            mSpans[gridIndex] = new HeightSpan(heightIndexMin
-                            , heightIndexMax
-                            , flags);
+            mSpans.put(gridIndex, new HeightSpan(heightIndexMin, heightIndexMax, flags));
             hasSpans = true;
             return true;
         }
@@ -307,7 +307,7 @@ public final class SolidHeightfield
                 if (previousSpan == null) {
                     // The new span is the new first span in this column.
                     // Insert it at the base of this column.
-                    mSpans[gridIndex] = newSpan;
+                    mSpans.put(gridIndex, newSpan);
                     hasSpans = true;
                 } else {
                     // The new span is between two spans.
@@ -441,7 +441,7 @@ public final class SolidHeightfield
      */
     public HeightSpan getData(int widthIndex, int depthIndex)
     {
-        return mSpans[gridIndex(widthIndex, depthIndex)];
+        return mSpans.get(gridIndex(widthIndex, depthIndex));
     }
     
     /**

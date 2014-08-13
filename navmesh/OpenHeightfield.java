@@ -21,9 +21,8 @@
  */
 package navmesh;
 
-import Extras.Helpers;
+import gnu.trove.map.hash.TIntObjectHashMap;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -173,7 +172,7 @@ public final class OpenHeightfield
                     int index = gridIndex(widthIndex, depthIndex);
                     
                     if( index >= 0 ) {
-                        OpenHeightSpan span = mSpans[index];
+                        OpenHeightSpan span = mSpans.get(index);
                     
                         if (span != null)
                         {
@@ -221,7 +220,7 @@ public final class OpenHeightfield
      */
     //private final Hashtable<Integer, OpenHeightSpan> mSpans =
     //    new Hashtable<Integer, OpenHeightSpan>();
-    private final OpenHeightSpan mSpans[] = new OpenHeightSpan[85000];
+    private final TIntObjectHashMap<OpenHeightSpan> mSpans = new TIntObjectHashMap<>();
     
     /**
      * Constructor
@@ -261,7 +260,7 @@ public final class OpenHeightfield
             , int depthIndex
             , OpenHeightSpan span)
     {
-        return mSpans[gridIndex(widthIndex, depthIndex)] = span;
+        return mSpans.put(gridIndex(widthIndex, depthIndex), span);
     }
     
     /**
@@ -298,7 +297,7 @@ public final class OpenHeightfield
     {
         int gridindex = gridIndex(widthIndex, depthIndex);
         if( gridindex < 0 ) return null;
-        return mSpans[gridindex];
+        return mSpans.get(gridindex);
     }
     
     /**

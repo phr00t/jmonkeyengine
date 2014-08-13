@@ -1,6 +1,7 @@
 package navmesh;
 
 import Extras.Helpers;
+import Rooms.Room;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
