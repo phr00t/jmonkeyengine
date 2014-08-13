@@ -21,10 +21,7 @@
  */
 package navmesh;
 
-import Extras.Helpers;
 import gnu.trove.map.hash.TIntObjectHashMap;
-import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
