@@ -162,9 +162,6 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
                     Display.update(false);
                 }else{
                     Display.processMessages();
-                    Thread.sleep(50);
-                    // add a small wait
-                    // to reduce CPU usage
                 }
             } catch (Throwable ex){
                 listener.handleError("Error while swapping buffers", ex);
