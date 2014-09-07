@@ -103,11 +103,13 @@ public class Path implements Iterable<Waypoint> {
     /**
      * Adds a new waypoint to the end of the list
      */
-    public void addWaypoint(Vector3f point, Cell cell) {
+    public boolean addWaypoint(Vector3f point, Cell cell) {
+        if( waypointList.size() > 32 ) return false; // too many waypoints! something is wrong...
         Waypoint newPoint = new Waypoint();
         newPoint.setPosition(point);
         newPoint.setCell(cell);
         waypointList.add(newPoint);
+        return true;
     }
 
     /**

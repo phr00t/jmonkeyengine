@@ -338,7 +338,7 @@ public class NavMeshPathfinder {
 //                newWayPoint = snapPointToCell(currentCell, newWayPoint);
             lastWayPoint = newWayPoint.clone();
 
-            navPath.addWaypoint(newWayPoint, currentCell);
+            if( navPath.addWaypoint(newWayPoint, currentCell) == false ) break;
 
             // get the next cell
             currentCell = currentCell.getLink(linkWall);
