@@ -58,7 +58,7 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
     protected AtomicBoolean needClose = new AtomicBoolean(false);
     protected boolean wasActive = false;
     protected int frameRate = 0;
-    protected boolean autoFlush = true;
+    protected boolean autoFlush = true, handleBufferSwapping = true;
 
     /**
      * @return Type.Display or Type.Canvas
@@ -158,7 +158,7 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
 
             // calls swap buffers, etc.
             try {
-                if (autoFlush){
+                if (autoFlush && handleBufferSwapping){
                     Display.update(false);
                 }else{
                     Display.processMessages();
@@ -257,6 +257,10 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
         return null;
     }
 
+    public void setBufferSwapping(boolean enabled) {
+        handleBufferSwapping = enabled;
+    }
+    
     public void setAutoFlushFrames(boolean enabled){
         this.autoFlush = enabled;
     }
