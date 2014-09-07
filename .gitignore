@@ -1,7 +1,6 @@
 /.gradle/
 /.nb-gradle/private/
 /.nb-gradle/profiles/private/
-/dist/
 /build/
 /netbeans/
 /jme3-core/build/
