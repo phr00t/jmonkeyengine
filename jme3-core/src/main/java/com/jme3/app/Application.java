@@ -597,8 +597,14 @@ public class Application implements SystemListener {
 
         runQueuedTasks();
 
-        if (speed == 0 || paused)
+        if (speed == 0 || paused) {
+            try {
+                Thread.sleep(50); // throttle the CPU when stopped
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Application.class.getName()).log(Level.SEVERE, null, ex);
+            }
             return;
+        }
 
         timer.update();
 

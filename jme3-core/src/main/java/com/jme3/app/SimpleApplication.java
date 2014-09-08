@@ -45,6 +45,8 @@ import com.jme3.scene.Spatial.CullHint;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext.Type;
 import com.jme3.system.JmeSystem;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * <code>SimpleApplication</code> is the base class for all jME3 Applications.
@@ -229,7 +231,13 @@ public abstract class SimpleApplication extends Application {
     @Override
     public void update() {
         super.update(); // makes sure to execute AppTasks
+        
         if (speed == 0 || paused) {
+            try {
+                Thread.sleep(50); // throttle the CPU when paused
+            } catch (InterruptedException ex) {
+                Logger.getLogger(SimpleApplication.class.getName()).log(Level.SEVERE, null, ex);
+            }
             return;
         }
 
