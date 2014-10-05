@@ -34,6 +34,7 @@ package com.jme3.shader;
 import com.jme3.export.*;
 import com.jme3.material.MatParam;
 import com.jme3.material.TechniqueDef;
+import static com.jme3.shader.VarType.Int;
 import com.jme3.util.ListMap;
 
 import java.io.IOException;
@@ -230,12 +231,20 @@ public class DefineList implements Savable, Cloneable {
                         }
                     }
                         break;
-                    case Float:
-                    case Int: {
-                        String newValue = val.toString();
+                    case Float: {
                         String current = defines.get(key);
-                        if (!newValue.equals(current)) {
-                            return false;
+                        if( current != null &&
+                            Float.parseFloat(current) != ((Float)val).floatValue() ) {
+                            return false;                            
+                        }
+                        size++;
+                    }
+                        break;
+                    case Int: {
+                        String current = defines.get(key);
+                        if( current != null &&
+                            Integer.parseInt(current) != ((Integer)val).intValue() ) {
+                            return false;                            
                         }
                         size++;
                     }
