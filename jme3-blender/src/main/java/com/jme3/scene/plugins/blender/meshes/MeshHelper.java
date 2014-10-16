@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -67,8 +68,6 @@ public class MeshHelper extends AbstractBlenderHelper {
     public static final int     UV_DATA_LAYER_TYPE_FMESH = 5;
     /** A type of UV data layer in bmesh type. */
     public static final int     UV_DATA_LAYER_TYPE_BMESH = 16;
-    /** The flag mask indicating if the edge belongs to a face or not. */
-    public static final int     EDGE_NOT_IN_FACE_FLAG    = 0x80;
 
     /** A material used for single lines and points. */
     private Material            blackUnshadedMaterial;
@@ -312,6 +311,49 @@ public class MeshHelper extends AbstractBlenderHelper {
                     }
                 }
                 result.add(weightsForVertex);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Selects the proper subsets of UV coordinates for the given sublist of indexes.
+     * @param face
+     *            the face with the original UV sets
+     * @param indexesSublist
+     *            the sub list of indexes
+     * @return a map of UV coordinates subsets
+     */
+    public Map<String, List<Vector2f>> selectUVSubset(Face face, Integer... indexesSublist) {
+        Map<String, List<Vector2f>> result = null;
+        if (face.getUvSets() != null) {
+            result = new HashMap<String, List<Vector2f>>();
+            for (Entry<String, List<Vector2f>> entry : face.getUvSets().entrySet()) {
+                List<Vector2f> uvs = new ArrayList<Vector2f>(indexesSublist.length);
+                for (Integer index : indexesSublist) {
+                    uvs.add(entry.getValue().get(face.getIndexes().indexOf(index)));
+                }
+                result.put(entry.getKey(), uvs);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Selects the proper subsets of vertex colors for the given sublist of indexes.
+     * @param face
+     *            the face with the original vertex colors
+     * @param indexesSublist
+     *            the sub list of indexes
+     * @return a sublist of vertex colors
+     */
+    public List<byte[]> selectVertexColorSubset(Face face, Integer... indexesSublist) {
+        List<byte[]> result = null;
+        List<byte[]> vertexColors = face.getVertexColors();
+        if (vertexColors != null) {
+            result = new ArrayList<byte[]>(indexesSublist.length);
+            for (Integer index : indexesSublist) {
+                result.add(vertexColors.get(face.getIndexes().indexOf(index)));
             }
         }
         return result;
