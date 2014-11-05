@@ -132,6 +132,18 @@ public class Face implements Comparator<Integer> {
     }
 
     /**
+     * @return the centroid of the face
+     */
+    public Vector3f computeCentroid() {
+        Vector3f result = new Vector3f();
+        List<Vector3f> vertices = temporalMesh.getVertices();
+        for (Integer index : indexes) {
+            result.addLocal(vertices.get(index));
+        }
+        return result.divideLocal(indexes.size());
+    }
+
+    /**
      * @return current indexes of the face (if it is already triangulated then more than one index group will be in the result list)
      */
     @SuppressWarnings("unchecked")
@@ -343,7 +355,7 @@ public class Face implements Comparator<Integer> {
             if (i != index && i != indexToIgnore) {
                 Vector3f v2 = vertices.get(i);
                 float d = v2.distance(v1);
-                if (d < distance && this.contains(new Edge(index, i, 0, true, vertices))) {
+                if (d < distance && this.contains(new Edge(index, i, 0, true, temporalMesh))) {
                     result = i;
                     distance = d;
                 }
@@ -366,14 +378,12 @@ public class Face implements Comparator<Integer> {
         if (!indexes.areNeighbours(index1, index2)) {
             List<Vector3f> vertices = temporalMesh.getVertices();
 
-            Edge e2 = new Edge();
             for (int i = 0; i < indexes.size(); ++i) {
                 int i1 = this.getIndex(i);
                 int i2 = this.getIndex(i + 1);
                 // check if the edges have no common verts (because if they do, they cannot cross)
                 if (i1 != index1 && i1 != index2 && i2 != index1 && i2 != index2) {
-                    e2.set(vertices.get(i1), vertices.get(i2));
-                    if (edge.cross(e2)) {
+                    if (edge.cross(new Edge(i1, i2, 0, false, temporalMesh))) {
                         return false;
                     }
                 }
@@ -406,6 +416,30 @@ public class Face implements Comparator<Integer> {
             return angle1 >= angle2;
         }
         return true;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + indexes.hashCode();
+        result = prime * result + temporalMesh.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof Face)) {
+            return false;
+        }
+        Face other = (Face) obj;
+        if (!indexes.equals(other.indexes)) {
+            return false;
+        }
+        return temporalMesh.equals(other.temporalMesh);
     }
 
     /**
