@@ -338,7 +338,7 @@ public class MaterialLoader implements AssetLoader {
 //            rs.setDepthWrite(false);
             mat.setTransparent(true);
             if (!noLight){
-                mat.setBoolean("UseAlpha", true);
+                // mat.setBoolean("UseAlpha", true);
             }
         }else{
             if (twoSide){
@@ -450,6 +450,9 @@ public class MaterialLoader implements AssetLoader {
                 }
                 String[] split = statement.getLine().split(" ", 2);
                 matName = split[1].trim();
+                if (matName.startsWith("\"") && matName.endsWith("\"")) {
+                    matName = matName.substring(1, matName.length() - 1);
+                }
                 readMaterial(statement);
                 Material mat = compileMaterial();
                 list.put(matName, mat);
@@ -458,7 +461,7 @@ public class MaterialLoader implements AssetLoader {
         
         return list;
     }
-
+    
     public Object load(AssetInfo info) throws IOException {
         InputStream in = null;
         try {
