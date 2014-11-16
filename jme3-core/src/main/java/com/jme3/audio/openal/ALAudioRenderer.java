@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.jme3.audio.lwjgl;
+package com.jme3.audio.openal;
 
 import com.jme3.audio.AudioSource.Status;
 import com.jme3.audio.*;
@@ -43,13 +43,14 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.lwjgl.LWJGLException;
-import static org.lwjgl.openal.AL10.*;
-import org.lwjgl.openal.*;
 
-public class LwjglAudioRenderer implements AudioRenderer, Runnable {
+import static com.jme3.audio.openal.AL.*;
+import static com.jme3.audio.openal.ALC.*;
+import static com.jme3.audio.openal.EFX.*;
 
-    private static final Logger logger = Logger.getLogger(LwjglAudioRenderer.class.getName());
+public class ALAudioRenderer implements AudioRenderer, Runnable {
+
+    private static final Logger logger = Logger.getLogger(ALAudioRenderer.class.getName());
     private final NativeObjectManager objManager = new NativeObjectManager();
     // When multiplied by STREAMING_BUFFER_COUNT, will equal 44100 * 2 * 2
     // which is exactly 1 second of audio.
@@ -63,39 +64,51 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
     private int[] channels;
     private AudioSource[] chanSrcs;
     private int nextChan = 0;
-    private ArrayList<Integer> freeChans = new ArrayList<Integer>();
+    private final ArrayList<Integer> freeChans = new ArrayList<Integer>();
     private Listener listener;
     private boolean audioDisabled = false;
     private boolean supportEfx = false;
+    private boolean supportPauseDevice = false;
     private int auxSends = 0;
     private int reverbFx = -1;
     private int reverbFxSlot = -1;
-    // Update audio 20 times per second
+    
+    // Fill streaming sources every 50 ms
     private static final float UPDATE_RATE = 0.05f;
-    private final Thread audioThread = new Thread(this, "jME3 Audio Thread");
+    private final Thread decoderThread = new Thread(this, "jME3 Audio Decoding Thread");
     private final AtomicBoolean threadLock = new AtomicBoolean(false);
 
-    public LwjglAudioRenderer() {
+    private final AL al;
+    private final ALC alc;
+    private final EFX efx;
+    
+    public ALAudioRenderer(AL al, ALC alc, EFX efx) {
+        this.al = al;
+        this.alc = alc;
+        this.efx = efx;
     }
 
     public void initialize() {
-        if (!audioThread.isAlive()) {
-            audioThread.setDaemon(true);
-            audioThread.setPriority(Thread.NORM_PRIORITY + 1);
-            audioThread.start();
+        if (!decoderThread.isAlive()) {
+            // Set high priority to avoid buffer starvation.
+            decoderThread.setDaemon(true);
+            decoderThread.setPriority(Thread.NORM_PRIORITY + 1);
+            decoderThread.start();
         } else {
             throw new IllegalStateException("Initialize already called");
         }
     }
 
     private void checkDead() {
-        if (audioThread.getState() == Thread.State.TERMINATED) {
-            throw new IllegalStateException("Audio thread is terminated");
+        if (decoderThread.getState() == Thread.State.TERMINATED) {
+            throw new IllegalStateException("Decoding thread is terminated");
         }
     }
 
     public void run() {
-        initInThread();
+        initInDecoderThread();
+        
+        // Notify render thread that OAL context is available.
         synchronized (threadLock) {
             threadLock.set(true);
             threadLock.notifyAll();
@@ -111,7 +124,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
             }
 
             synchronized (threadLock) {
-                updateInThread(UPDATE_RATE);
+                updateInDecoderThread(UPDATE_RATE);
             }
 
             long endTime = System.nanoTime();
@@ -130,42 +143,36 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         }
 
         synchronized (threadLock) {
-            cleanupInThread();
+            cleanupInDecoderThread();
         }
     }
 
-    public void initInThread() {
+    public void initInDecoderThread() {
         try {
-            if (!AL.isCreated()) {
-                AL.create();
+            if (!alc.isCreated()) {
+                alc.createALC();
             }
-        } catch (OpenALException ex) {
-            logger.log(Level.SEVERE, "Failed to load audio library", ex);
-            audioDisabled = true;
-            return;
-        } catch (LWJGLException ex) {
-            logger.log(Level.SEVERE, "Failed to load audio library", ex);
-            audioDisabled = true;
-            return;
         } catch (UnsatisfiedLinkError ex) {
             logger.log(Level.SEVERE, "Failed to load audio library", ex);
             audioDisabled = true;
             return;
         }
 
-        ALCdevice device = AL.getDevice();
-        String deviceName = ALC10.alcGetString(device, ALC10.ALC_DEVICE_SPECIFIER);
+        String deviceName = alc.alcGetString(ALC.ALC_DEVICE_SPECIFIER);
 
         logger.log(Level.INFO, "Audio Device: {0}", deviceName);
-        logger.log(Level.INFO, "Audio Vendor: {0}", alGetString(AL_VENDOR));
-        logger.log(Level.INFO, "Audio Renderer: {0}", alGetString(AL_RENDERER));
-        logger.log(Level.INFO, "Audio Version: {0}", alGetString(AL_VERSION));
+        logger.log(Level.INFO, "Audio Vendor: {0}", al.alGetString(AL_VENDOR));
+        logger.log(Level.INFO, "Audio Renderer: {0}", al.alGetString(AL_RENDERER));
+        logger.log(Level.INFO, "Audio Version: {0}", al.alGetString(AL_VERSION));
 
+        logger.log(Level.INFO, "ALC extensions: {0}", alc.alcGetString(ALC.ALC_EXTENSIONS));
+        logger.log(Level.INFO, "AL extensions: {0}", al.alGetString(AL_EXTENSIONS));
+        
         // Find maximum # of sources supported by this implementation
         ArrayList<Integer> channelList = new ArrayList<Integer>();
         for (int i = 0; i < MAX_NUM_CHANNELS; i++) {
-            int chan = alGenSources();
-            if (alGetError() != 0) {
+            int chan = al.alGenSources();
+            if (al.alGetError() != 0) {
                 break;
             } else {
                 channelList.add(chan);
@@ -182,41 +189,49 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
 
         logger.log(Level.INFO, "AudioRenderer supports {0} channels", channels.length);
 
-        supportEfx = ALC10.alcIsExtensionPresent(device, "ALC_EXT_EFX");
+        // Pause device is a feature used specifically on Android
+        // where the application could be closed but still running,
+        // thus the audio context remains open but no audio should be playing.
+        supportPauseDevice = alc.alcIsExtensionPresent("ALC_SOFT_pause_device");
+        if (!supportPauseDevice) {
+            logger.log(Level.WARNING, "Pausing audio device not supported.");
+        }
+        
+        supportEfx = alc.alcIsExtensionPresent("ALC_EXT_EFX");
         if (supportEfx) {
             ib.position(0).limit(1);
-            ALC10.alcGetInteger(device, EFX10.ALC_EFX_MAJOR_VERSION, ib);
+            alc.alcGetInteger(EFX.ALC_EFX_MAJOR_VERSION, ib, 1);
             int major = ib.get(0);
             ib.position(0).limit(1);
-            ALC10.alcGetInteger(device, EFX10.ALC_EFX_MINOR_VERSION, ib);
+            alc.alcGetInteger(EFX.ALC_EFX_MINOR_VERSION, ib, 1);
             int minor = ib.get(0);
             logger.log(Level.INFO, "Audio effect extension version: {0}.{1}", new Object[]{major, minor});
 
-            ALC10.alcGetInteger(device, EFX10.ALC_MAX_AUXILIARY_SENDS, ib);
+            alc.alcGetInteger(EFX.ALC_MAX_AUXILIARY_SENDS, ib, 1);
             auxSends = ib.get(0);
             logger.log(Level.INFO, "Audio max auxilary sends: {0}", auxSends);
 
             // create slot
             ib.position(0).limit(1);
-            EFX10.alGenAuxiliaryEffectSlots(ib);
+            efx.alGenAuxiliaryEffectSlots(1, ib);
             reverbFxSlot = ib.get(0);
 
             // create effect
             ib.position(0).limit(1);
-            EFX10.alGenEffects(ib);
+            efx.alGenEffects(1, ib);
             reverbFx = ib.get(0);
-            EFX10.alEffecti(reverbFx, EFX10.AL_EFFECT_TYPE, EFX10.AL_EFFECT_REVERB);
+            efx.alEffecti(reverbFx, EFX.AL_EFFECT_TYPE, EFX.AL_EFFECT_REVERB);
 
             // attach reverb effect to effect slot
-            EFX10.alAuxiliaryEffectSloti(reverbFxSlot, EFX10.AL_EFFECTSLOT_EFFECT, reverbFx);
+            efx.alAuxiliaryEffectSloti(reverbFxSlot, EFX.AL_EFFECTSLOT_EFFECT, reverbFx);
         } else {
             logger.log(Level.WARNING, "OpenAL EFX not available! Audio effects won't work.");
         }
     }
 
-    public void cleanupInThread() {
+    public void cleanupInDecoderThread() {
         if (audioDisabled) {
-            AL.destroy();
+            alc.destroyALC();
             return;
         }
 
@@ -231,7 +246,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         ib.clear();
         ib.put(channels);
         ib.flip();
-        alDeleteSources(ib);
+        al.alDeleteSources(channels.length, ib);
 
         // delete audio buffers and filters
         objManager.deleteAllObjects(this);
@@ -239,24 +254,24 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         if (supportEfx) {
             ib.position(0).limit(1);
             ib.put(0, reverbFx);
-            EFX10.alDeleteEffects(ib);
+            efx.alDeleteEffects(1, ib);
 
             // If this is not allocated, why is it deleted?
             // Commented out to fix native crash in OpenAL.
             ib.position(0).limit(1);
             ib.put(0, reverbFxSlot);
-            EFX10.alDeleteAuxiliaryEffectSlots(ib);
+            efx.alDeleteAuxiliaryEffectSlots(1, ib);
         }
 
-        AL.destroy();
+        alc.destroyALC();
     }
 
     public void cleanup() {
         // kill audio thread
-        if (audioThread.isAlive()) {
-            audioThread.interrupt();
+        if (decoderThread.isAlive()) {
+            decoderThread.interrupt();
             try {
-                audioThread.join();
+                decoderThread.join();
             } catch (InterruptedException ex) {
             }
         }
@@ -266,7 +281,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         int id = f.getId();
         if (id == -1) {
             ib.position(0).limit(1);
-            EFX10.alGenFilters(ib);
+            efx.alGenFilters(1, ib);
             id = ib.get(0);
             f.setId(id);
 
@@ -275,9 +290,9 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
 
         if (f instanceof LowPassFilter) {
             LowPassFilter lpf = (LowPassFilter) f;
-            EFX10.alFilteri(id, EFX10.AL_FILTER_TYPE, EFX10.AL_FILTER_LOWPASS);
-            EFX10.alFilterf(id, EFX10.AL_LOWPASS_GAIN, lpf.getVolume());
-            EFX10.alFilterf(id, EFX10.AL_LOWPASS_GAINHF, lpf.getHighFreqVolume());
+            efx.alFilteri(id, EFX.AL_FILTER_TYPE, EFX.AL_FILTER_LOWPASS);
+            efx.alFilterf(id, EFX.AL_LOWPASS_GAIN, lpf.getVolume());
+            efx.alFilterf(id, EFX.AL_LOWPASS_GAINHF, lpf.getHighFreqVolume());
         } else {
             throw new UnsupportedOperationException("Filter type unsupported: "
                     + f.getClass().getName());
@@ -322,7 +337,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                     }
 
                     Vector3f pos = src.getPosition();
-                    alSource3f(id, AL_POSITION, pos.x, pos.y, pos.z);
+                    al.alSource3f(id, AL_POSITION, pos.x, pos.y, pos.z);
                     break;
                 case Velocity:
                     if (!src.isPositional()) {
@@ -330,28 +345,28 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                     }
 
                     Vector3f vel = src.getVelocity();
-                    alSource3f(id, AL_VELOCITY, vel.x, vel.y, vel.z);
+                    al.alSource3f(id, AL_VELOCITY, vel.x, vel.y, vel.z);
                     break;
                 case MaxDistance:
                     if (!src.isPositional()) {
                         return;
                     }
 
-                    alSourcef(id, AL_MAX_DISTANCE, src.getMaxDistance());
+                    al.alSourcef(id, AL_MAX_DISTANCE, src.getMaxDistance());
                     break;
                 case RefDistance:
                     if (!src.isPositional()) {
                         return;
                     }
 
-                    alSourcef(id, AL_REFERENCE_DISTANCE, src.getRefDistance());
+                    al.alSourcef(id, AL_REFERENCE_DISTANCE, src.getRefDistance());
                     break;
                 case ReverbFilter:
                     if (!supportEfx || !src.isPositional() || !src.isReverbEnabled()) {
                         return;
                     }
 
-                    int filter = EFX10.AL_FILTER_NULL;
+                    int filter = EFX.AL_FILTER_NULL;
                     if (src.getReverbFilter() != null) {
                         Filter f = src.getReverbFilter();
                         if (f.isUpdateNeeded()) {
@@ -359,7 +374,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                         }
                         filter = f.getId();
                     }
-                    AL11.alSource3i(id, EFX10.AL_AUXILIARY_SEND_FILTER, reverbFxSlot, 0, filter);
+                    al.alSource3i(id, EFX.AL_AUXILIARY_SEND_FILTER, reverbFxSlot, 0, filter);
                     break;
                 case ReverbEnabled:
                     if (!supportEfx || !src.isPositional()) {
@@ -369,20 +384,20 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                     if (src.isReverbEnabled()) {
                         updateSourceParam(src, AudioParam.ReverbFilter);
                     } else {
-                        AL11.alSource3i(id, EFX10.AL_AUXILIARY_SEND_FILTER, 0, 0, EFX10.AL_FILTER_NULL);
+                        al.alSource3i(id, EFX.AL_AUXILIARY_SEND_FILTER, 0, 0, EFX.AL_FILTER_NULL);
                     }
                     break;
                 case IsPositional:
                     if (!src.isPositional()) {
                         // Play in headspace
-                        alSourcei(id, AL_SOURCE_RELATIVE, AL_TRUE);
-                        alSource3f(id, AL_POSITION, 0, 0, 0);
-                        alSource3f(id, AL_VELOCITY, 0, 0, 0);
+                        al.alSourcei(id, AL_SOURCE_RELATIVE, AL_TRUE);
+                        al.alSource3f(id, AL_POSITION, 0, 0, 0);
+                        al.alSource3f(id, AL_VELOCITY, 0, 0, 0);
                         
                         // Disable reverb
-                        AL11.alSource3i(id, EFX10.AL_AUXILIARY_SEND_FILTER, 0, 0, EFX10.AL_FILTER_NULL);
+                        al.alSource3i(id, EFX.AL_AUXILIARY_SEND_FILTER, 0, 0, EFX.AL_FILTER_NULL);
                     } else {
-                        alSourcei(id, AL_SOURCE_RELATIVE, AL_FALSE);
+                        al.alSourcei(id, AL_SOURCE_RELATIVE, AL_FALSE);
                         updateSourceParam(src, AudioParam.Position);
                         updateSourceParam(src, AudioParam.Velocity);
                         updateSourceParam(src, AudioParam.MaxDistance);
@@ -396,32 +411,32 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                     }
 
                     Vector3f dir = src.getDirection();
-                    alSource3f(id, AL_DIRECTION, dir.x, dir.y, dir.z);
+                    al.alSource3f(id, AL_DIRECTION, dir.x, dir.y, dir.z);
                     break;
                 case InnerAngle:
                     if (!src.isDirectional()) {
                         return;
                     }
 
-                    alSourcef(id, AL_CONE_INNER_ANGLE, src.getInnerAngle());
+                    al.alSourcef(id, AL_CONE_INNER_ANGLE, src.getInnerAngle());
                     break;
                 case OuterAngle:
                     if (!src.isDirectional()) {
                         return;
                     }
 
-                    alSourcef(id, AL_CONE_OUTER_ANGLE, src.getOuterAngle());
+                    al.alSourcef(id, AL_CONE_OUTER_ANGLE, src.getOuterAngle());
                     break;
                 case IsDirectional:
                     if (src.isDirectional()) {
                         updateSourceParam(src, AudioParam.Direction);
                         updateSourceParam(src, AudioParam.InnerAngle);
                         updateSourceParam(src, AudioParam.OuterAngle);
-                        alSourcef(id, AL_CONE_OUTER_GAIN, 0);
+                        al.alSourcef(id, AL_CONE_OUTER_GAIN, 0);
                     } else {
-                        alSourcef(id, AL_CONE_INNER_ANGLE, 360);
-                        alSourcef(id, AL_CONE_OUTER_ANGLE, 360);
-                        alSourcef(id, AL_CONE_OUTER_GAIN, 1f);
+                        al.alSourcef(id, AL_CONE_INNER_ANGLE, 360);
+                        al.alSourcef(id, AL_CONE_OUTER_ANGLE, 360);
+                        al.alSourcef(id, AL_CONE_OUTER_GAIN, 1f);
                     }
                     break;
                 case DryFilter:
@@ -435,26 +450,24 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                             updateFilter(f);
 
                             // NOTE: must re-attach filter for changes to apply.
-                            alSourcei(id, EFX10.AL_DIRECT_FILTER, f.getId());
+                            al.alSourcei(id, EFX.AL_DIRECT_FILTER, f.getId());
                         }
                     } else {
-                        alSourcei(id, EFX10.AL_DIRECT_FILTER, EFX10.AL_FILTER_NULL);
+                        al.alSourcei(id, EFX.AL_DIRECT_FILTER, EFX.AL_FILTER_NULL);
                     }
                     break;
                 case Looping:
-                    if (src.isLooping()) {
-                        if (!(src.getAudioData() instanceof AudioStream)) {
-                            alSourcei(id, AL_LOOPING, AL_TRUE);
-                        }
+                    if (src.isLooping() && !(src.getAudioData() instanceof AudioStream)) {
+                        al.alSourcei(id, AL_LOOPING, AL_TRUE);
                     } else {
-                        alSourcei(id, AL_LOOPING, AL_FALSE);
+                        al.alSourcei(id, AL_LOOPING, AL_FALSE);
                     }
                     break;
                 case Volume:
-                    alSourcef(id, AL_GAIN, src.getVolume());
+                    al.alSourcef(id, AL_GAIN, src.getVolume());
                     break;
                 case Pitch:
-                    alSourcef(id, AL_PITCH, src.getPitch());
+                    al.alSourcef(id, AL_PITCH, src.getPitch());
                     break;
             }
         }
@@ -464,14 +477,14 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         if (src.isPositional()) {
             Vector3f pos = src.getPosition();
             Vector3f vel = src.getVelocity();
-            alSource3f(id, AL_POSITION, pos.x, pos.y, pos.z);
-            alSource3f(id, AL_VELOCITY, vel.x, vel.y, vel.z);
-            alSourcef(id, AL_MAX_DISTANCE, src.getMaxDistance());
-            alSourcef(id, AL_REFERENCE_DISTANCE, src.getRefDistance());
-            alSourcei(id, AL_SOURCE_RELATIVE, AL_FALSE);
+            al.alSource3f(id, AL_POSITION, pos.x, pos.y, pos.z);
+            al.alSource3f(id, AL_VELOCITY, vel.x, vel.y, vel.z);
+            al.alSourcef(id, AL_MAX_DISTANCE, src.getMaxDistance());
+            al.alSourcef(id, AL_REFERENCE_DISTANCE, src.getRefDistance());
+            al.alSourcei(id, AL_SOURCE_RELATIVE, AL_FALSE);
 
             if (src.isReverbEnabled() && supportEfx) {
-                int filter = EFX10.AL_FILTER_NULL;
+                int filter = EFX.AL_FILTER_NULL;
                 if (src.getReverbFilter() != null) {
                     Filter f = src.getReverbFilter();
                     if (f.isUpdateNeeded()) {
@@ -479,13 +492,13 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                     }
                     filter = f.getId();
                 }
-                AL11.alSource3i(id, EFX10.AL_AUXILIARY_SEND_FILTER, reverbFxSlot, 0, filter);
+                al.alSource3i(id, EFX.AL_AUXILIARY_SEND_FILTER, reverbFxSlot, 0, filter);
             }
         } else {
             // play in headspace
-            alSourcei(id, AL_SOURCE_RELATIVE, AL_TRUE);
-            alSource3f(id, AL_POSITION, 0, 0, 0);
-            alSource3f(id, AL_VELOCITY, 0, 0, 0);
+            al.alSourcei(id, AL_SOURCE_RELATIVE, AL_TRUE);
+            al.alSource3f(id, AL_POSITION, 0, 0, 0);
+            al.alSource3f(id, AL_VELOCITY, 0, 0, 0);
         }
 
         if (src.getDryFilter() != null && supportEfx) {
@@ -494,29 +507,29 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                 updateFilter(f);
 
                 // NOTE: must re-attach filter for changes to apply.
-                alSourcei(id, EFX10.AL_DIRECT_FILTER, f.getId());
+                al.alSourcei(id, EFX.AL_DIRECT_FILTER, f.getId());
             }
         }
 
-        if (forceNonLoop) {
-            alSourcei(id, AL_LOOPING, AL_FALSE);
+        if (forceNonLoop || src.getAudioData() instanceof AudioStream) {
+            al.alSourcei(id, AL_LOOPING, AL_FALSE);
         } else {
-            alSourcei(id, AL_LOOPING, src.isLooping() ? AL_TRUE : AL_FALSE);
+            al.alSourcei(id, AL_LOOPING, src.isLooping() ? AL_TRUE : AL_FALSE);
         }
-        alSourcef(id, AL_GAIN, src.getVolume());
-        alSourcef(id, AL_PITCH, src.getPitch());
-        alSourcef(id, AL11.AL_SEC_OFFSET, src.getTimeOffset());
+        al.alSourcef(id, AL_GAIN, src.getVolume());
+        al.alSourcef(id, AL_PITCH, src.getPitch());
+        al.alSourcef(id, AL_SEC_OFFSET, src.getTimeOffset());
 
         if (src.isDirectional()) {
             Vector3f dir = src.getDirection();
-            alSource3f(id, AL_DIRECTION, dir.x, dir.y, dir.z);
-            alSourcef(id, AL_CONE_INNER_ANGLE, src.getInnerAngle());
-            alSourcef(id, AL_CONE_OUTER_ANGLE, src.getOuterAngle());
-            alSourcef(id, AL_CONE_OUTER_GAIN, 0);
+            al.alSource3f(id, AL_DIRECTION, dir.x, dir.y, dir.z);
+            al.alSourcef(id, AL_CONE_INNER_ANGLE, src.getInnerAngle());
+            al.alSourcef(id, AL_CONE_OUTER_ANGLE, src.getOuterAngle());
+            al.alSourcef(id, AL_CONE_OUTER_GAIN, 0);
         } else {
-            alSourcef(id, AL_CONE_INNER_ANGLE, 360);
-            alSourcef(id, AL_CONE_OUTER_ANGLE, 360);
-            alSourcef(id, AL_CONE_OUTER_GAIN, 1f);
+            al.alSourcef(id, AL_CONE_INNER_ANGLE, 360);
+            al.alSourcef(id, AL_CONE_OUTER_ANGLE, 360);
+            al.alSourcef(id, AL_CONE_OUTER_GAIN, 1f);
         }
     }
 
@@ -536,7 +549,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
             switch (param) {
                 case Position:
                     Vector3f pos = listener.getLocation();
-                    alListener3f(AL_POSITION, pos.x, pos.y, pos.z);
+                    al.alListener3f(AL_POSITION, pos.x, pos.y, pos.z);
                     break;
                 case Rotation:
                     Vector3f dir = listener.getDirection();
@@ -545,14 +558,14 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                     fb.put(dir.x).put(dir.y).put(dir.z);
                     fb.put(up.x).put(up.y).put(up.z);
                     fb.flip();
-                    alListener(AL_ORIENTATION, fb);
+                    al.alListener(AL_ORIENTATION, fb);
                     break;
                 case Velocity:
                     Vector3f vel = listener.getVelocity();
-                    alListener3f(AL_VELOCITY, vel.x, vel.y, vel.z);
+                    al.alListener3f(AL_VELOCITY, vel.x, vel.y, vel.z);
                     break;
                 case Volume:
-                    alListenerf(AL_GAIN, listener.getVolume());
+                    al.alListenerf(AL_GAIN, listener.getVolume());
                     break;
             }
         }
@@ -564,14 +577,14 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         Vector3f dir = listener.getDirection();
         Vector3f up = listener.getUp();
 
-        alListener3f(AL_POSITION, pos.x, pos.y, pos.z);
-        alListener3f(AL_VELOCITY, vel.x, vel.y, vel.z);
+        al.alListener3f(AL_POSITION, pos.x, pos.y, pos.z);
+        al.alListener3f(AL_VELOCITY, vel.x, vel.y, vel.z);
         fb.rewind();
         fb.put(dir.x).put(dir.y).put(dir.z);
         fb.put(up.x).put(up.y).put(up.z);
         fb.flip();
-        alListener(AL_ORIENTATION, fb);
-        alListenerf(AL_GAIN, listener.getVolume());
+        al.alListener(AL_ORIENTATION, fb);
+        al.alListenerf(AL_GAIN, listener.getVolume());
     }
 
     private int newChannel() {
@@ -605,21 +618,21 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                 return;
             }
 
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_DENSITY, env.getDensity());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_DIFFUSION, env.getDiffusion());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_GAIN, env.getGain());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_GAINHF, env.getGainHf());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_DECAY_TIME, env.getDecayTime());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_DECAY_HFRATIO, env.getDecayHFRatio());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_REFLECTIONS_GAIN, env.getReflectGain());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_REFLECTIONS_DELAY, env.getReflectDelay());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_LATE_REVERB_GAIN, env.getLateReverbGain());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_LATE_REVERB_DELAY, env.getLateReverbDelay());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_AIR_ABSORPTION_GAINHF, env.getAirAbsorbGainHf());
-            EFX10.alEffectf(reverbFx, EFX10.AL_REVERB_ROOM_ROLLOFF_FACTOR, env.getRoomRolloffFactor());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_DENSITY, env.getDensity());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_DIFFUSION, env.getDiffusion());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_GAIN, env.getGain());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_GAINHF, env.getGainHf());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_DECAY_TIME, env.getDecayTime());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_DECAY_HFRATIO, env.getDecayHFRatio());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_REFLECTIONS_GAIN, env.getReflectGain());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_REFLECTIONS_DELAY, env.getReflectDelay());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_LATE_REVERB_GAIN, env.getLateReverbGain());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_LATE_REVERB_DELAY, env.getLateReverbDelay());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_AIR_ABSORPTION_GAINHF, env.getAirAbsorbGainHf());
+            efx.alEffectf(reverbFx, EFX.AL_REVERB_ROOM_ROLLOFF_FACTOR, env.getRoomRolloffFactor());
 
             // attach effect to slot
-            EFX10.alAuxiliaryEffectSloti(reverbFxSlot, EFX10.AL_EFFECTSLOT_EFFECT, reverbFx);
+            efx.alAuxiliaryEffectSloti(reverbFxSlot, EFX.AL_EFFECTSLOT_EFFECT, reverbFx);
         }
     }
 
@@ -645,62 +658,88 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         nativeBuf.put(arrayBuf, 0, size);
         nativeBuf.flip();
 
-        alBufferData(id, convertFormat(stream), nativeBuf, stream.getSampleRate());
+        al.alBufferData(id, convertFormat(stream), nativeBuf, size, stream.getSampleRate());
 
         return true;
     }
 
-    private boolean fillStreamingSource(int sourceId, AudioStream stream) {
-        if (!stream.isOpen()) {
-            return false;
-        }
-
-        boolean active = true;
-        int processed = alGetSourcei(sourceId, AL_BUFFERS_PROCESSED);
-
-//        while((processed--) != 0){
-        if (processed > 0) {
+    private boolean fillStreamingSource(int sourceId, AudioStream stream, boolean looping) {
+        boolean success = false;
+        int processed = al.alGetSourcei(sourceId, AL_BUFFERS_PROCESSED);
+        
+        for (int i = 0; i < processed; i++) {
             int buffer;
 
             ib.position(0).limit(1);
-            alSourceUnqueueBuffers(sourceId, ib);
+            al.alSourceUnqueueBuffers(sourceId, 1, ib);
             buffer = ib.get(0);
 
-            active = fillBuffer(stream, buffer);
-
-            ib.position(0).limit(1);
-            ib.put(0, buffer);
-            alSourceQueueBuffers(sourceId, ib);
+            boolean active = fillBuffer(stream, buffer);
+            
+            if (!active && !stream.isEOF()) {
+                throw new AssertionError();
+            }
+            
+            if (!active && looping) {
+                stream.setTime(0);
+                active = fillBuffer(stream, buffer);
+            }
+            
+            if (active) {
+                ib.position(0).limit(1);
+                ib.put(0, buffer);
+                al.alSourceQueueBuffers(sourceId, 1, ib);
+                // At least one buffer enqueued = success.
+                success = true;
+            } else {
+                // No more data left to process.
+                break;
+            }
         }
 
-        if (!active && stream.isOpen()) {
-            stream.close();
-        }
-
-        return active;
+        return success;
     }
 
-    private boolean attachStreamToSource(int sourceId, AudioStream stream) {
-        boolean active = true;
-        for (int id : stream.getIds()) {
-            active = fillBuffer(stream, id);
-            ib.position(0).limit(1);
-            ib.put(id).flip();
-            alSourceQueueBuffers(sourceId, ib);
+    private boolean attachStreamToSource(int sourceId, AudioStream stream, boolean looping) {
+        boolean success = false;
+        
+        // Reset the stream. Typically happens if it finished playing on 
+        // its own and got reclaimed. 
+        // Note that AudioNode.stop() already resets the stream
+        // since it might not be in EOF when stopped.
+        if (stream.isEOF()) {
+            stream.setTime(0);
         }
-        return active;
+        
+        for (int id : stream.getIds()) {
+            boolean active = fillBuffer(stream, id);
+            if (!active && !stream.isEOF()) {
+                throw new AssertionError();
+            }
+            if (!active && looping) {
+                stream.setTime(0);
+                active = fillBuffer(stream, id);
+            }
+            if (active) {
+                ib.position(0).limit(1);
+                ib.put(id).flip();
+                al.alSourceQueueBuffers(sourceId, 1, ib);
+                success = true;
+            }
+        }
+        return success;
     }
 
     private boolean attachBufferToSource(int sourceId, AudioBuffer buffer) {
-        alSourcei(sourceId, AL_BUFFER, buffer.getId());
+        al.alSourcei(sourceId, AL_BUFFER, buffer.getId());
         return true;
     }
 
-    private boolean attachAudioToSource(int sourceId, AudioData data) {
+    private boolean attachAudioToSource(int sourceId, AudioData data, boolean looping) {
         if (data instanceof AudioBuffer) {
             return attachBufferToSource(sourceId, (AudioBuffer) data);
         } else if (data instanceof AudioStream) {
-            return attachStreamToSource(sourceId, (AudioStream) data);
+            return attachStreamToSource(sourceId, (AudioStream) data, looping);
         }
         throw new UnsupportedOperationException();
     }
@@ -711,96 +750,137 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
             AudioSource src = chanSrcs[index];
 
             int sourceId = channels[index];
-            alSourceStop(sourceId);
-
-            if (src.getAudioData() instanceof AudioStream) {
-                AudioStream str = (AudioStream) src.getAudioData();
-                ib.position(0).limit(STREAMING_BUFFER_COUNT);
-                ib.put(str.getIds()).flip();
-                alSourceUnqueueBuffers(sourceId, ib);
-            } else if (src.getAudioData() instanceof AudioBuffer) {
-                alSourcei(sourceId, AL_BUFFER, 0);
-            }
+            al.alSourceStop(sourceId);
+            
+            // For streaming sources, this will clear all queued buffers.
+            al.alSourcei(sourceId, AL_BUFFER, 0);
 
             if (src.getDryFilter() != null && supportEfx) {
                 // detach filter
-                alSourcei(sourceId, EFX10.AL_DIRECT_FILTER, EFX10.AL_FILTER_NULL);
+                al.alSourcei(sourceId, EFX.AL_DIRECT_FILTER, EFX.AL_FILTER_NULL);
             }
             if (src.isPositional()) {
                 AudioSource pas = (AudioSource) src;
                 if (pas.isReverbEnabled() && supportEfx) {
-                    AL11.alSource3i(sourceId, EFX10.AL_AUXILIARY_SEND_FILTER, 0, 0, EFX10.AL_FILTER_NULL);
+                    al.alSource3i(sourceId, EFX.AL_AUXILIARY_SEND_FILTER, 0, 0, EFX.AL_FILTER_NULL);
                 }
             }
 
             chanSrcs[index] = null;
         }
     }
-
-    public void update(float tpf) {
-        // does nothing
+    
+    private AudioSource.Status convertStatus(int oalStatus) {
+        switch (oalStatus) {
+            case AL_INITIAL:
+            case AL_STOPPED:
+                return Status.Stopped;
+            case AL_PAUSED:
+                return Status.Paused;
+            case AL_PLAYING:
+                return Status.Playing;
+            default:
+                throw new UnsupportedOperationException("Unrecognized OAL state: " + oalStatus);
+        }
     }
 
-    public void updateInThread(float tpf) {
+    public void update(float tpf) {
+        synchronized (threadLock) {
+            updateInRenderThread(tpf);
+        }
+    }
+
+    public void updateInRenderThread(float tpf) {
+        if (audioDisabled) {
+            return;
+        }
+        
+        for (int i = 0; i < channels.length; i++) {
+            AudioSource src = chanSrcs[i];
+            
+            if (src == null) {
+                continue;
+            }
+
+            int sourceId = channels[i];
+            boolean boundSource = i == src.getChannel();
+            boolean reclaimChannel = false;
+            
+            Status oalStatus = convertStatus(al.alGetSourcei(sourceId, AL_SOURCE_STATE));
+            Status jmeStatus = src.getStatus();
+            
+            // Check if we need to sync JME status with OAL status.
+            if (oalStatus != jmeStatus) {
+                if (oalStatus == Status.Stopped && jmeStatus == Status.Playing) {
+                    // Maybe we need to reclaim the channel.
+                    if (src.getAudioData() instanceof AudioStream) {
+                        AudioStream stream = (AudioStream) src.getAudioData();
+                        
+                        if (stream.isEOF() && !src.isLooping()) {
+                            // Stream finished playing
+                            reclaimChannel = true;
+                        } else {
+                            // Stream still has data. 
+                            // Buffer starvation occured.
+                            // Audio decoder thread will fill the data 
+                            // and start the channel again.
+                        }
+                    } else {
+                        // Buffer finished playing.
+                        reclaimChannel = true;
+                    }
+                    
+                    if (reclaimChannel) {
+                        if (boundSource) {
+                            src.setStatus(Status.Stopped);
+                            src.setChannel(-1);
+                        }
+                        clearChannel(i);
+                        freeChannel(i);
+                    }
+                } else {
+                    // jME3 state does not match OAL state.
+                    throw new AssertionError();
+                }
+            } else {
+                // Stopped channel was not cleared correctly.
+                if (oalStatus == Status.Stopped) {
+                    throw new AssertionError();
+                }
+            }
+        }
+    }
+    
+    public void updateInDecoderThread(float tpf) {
         if (audioDisabled) {
             return;
         }
 
         for (int i = 0; i < channels.length; i++) {
             AudioSource src = chanSrcs[i];
-            if (src == null) {
+            
+            if (src == null || !(src.getAudioData() instanceof AudioStream)) {
                 continue;
             }
 
             int sourceId = channels[i];
+            AudioStream stream = (AudioStream) src.getAudioData();
 
-            // is the source bound to this channel
-            // if false, it's an instanced playback
-            boolean boundSource = i == src.getChannel();
+            Status oalStatus = convertStatus(al.alGetSourcei(sourceId, AL_SOURCE_STATE));
+            Status jmeStatus = src.getStatus();
 
-            // source's data is streaming
-            boolean streaming = src.getAudioData() instanceof AudioStream;
+            // Keep filling data (even if we are stopped / paused)
+            boolean buffersWereFilled = fillStreamingSource(sourceId, stream, src.isLooping());
 
-            // only buffered sources can be bound
-            assert (boundSource && streaming) || (!streaming);
-
-            int state = alGetSourcei(sourceId, AL_SOURCE_STATE);
-            boolean wantPlaying = src.getStatus() == Status.Playing;
-            boolean stopped = state == AL_STOPPED;
-
-            if (streaming && wantPlaying) {
-                AudioStream stream = (AudioStream) src.getAudioData();
-                if (stream.isOpen()) {
-                    fillStreamingSource(sourceId, stream);
-                    if (stopped) {
-                        alSourcePlay(sourceId);
-                    }
+            if (buffersWereFilled) {
+                if (oalStatus == Status.Stopped && jmeStatus == Status.Playing) {
+                    // The source got stopped due to buffer starvation.
+                    // Start it again.
+                    logger.log(Level.WARNING, "Buffer starvation "
+                                            + "occurred while playing stream");
+                    al.alSourcePlay(sourceId);
                 } else {
-                    if (stopped) {
-                        // became inactive
-                        src.setStatus(Status.Stopped);
-                        src.setChannel(-1);
-                        clearChannel(i);
-                        freeChannel(i);
-
-                        // And free the audio since it cannot be
-                        // played again anyway.
-                        deleteAudioData(stream);
-                    }
-                }
-            } else if (!streaming) {
-                boolean paused = state == AL_PAUSED;
-
-                // make sure OAL pause state & source state coincide
-                assert (src.getStatus() == Status.Paused && paused) || (!paused);
-
-                if (stopped) {
-                    if (boundSource) {
-                        src.setStatus(Status.Stopped);
-                        src.setChannel(-1);
-                    }
-                    clearChannel(i);
-                    freeChannel(i);
+                    // Buffers were filled, stream continues to play.
                 }
             }
         }
@@ -833,6 +913,22 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
             setListenerParams(listener);
         }
     }
+    
+    public void pauseAll() {
+        if (!supportPauseDevice) {
+            throw new UnsupportedOperationException("Pause device is NOT supported!");
+        }
+        
+        alc.alcDevicePauseSOFT();
+    }
+
+    public void resumeAll() {
+        if (!supportPauseDevice) {
+            throw new UnsupportedOperationException("Pause device is NOT supported!");
+        }
+        
+        alc.alcDeviceResumeSOFT();
+    }
 
     public void playSourceInstance(AudioSource src) {
         checkDead();
@@ -850,7 +946,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
             if (src.getAudioData() instanceof AudioStream) {
                 throw new UnsupportedOperationException(
                         "Cannot play instances "
-                        + "of audio streams. Use playSource() instead.");
+                        + "of audio streams. Use play() instead.");
             }
 
             if (src.getAudioData().isUpdateNeeded()) {
@@ -869,11 +965,11 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
 
             // set parameters, like position and max distance
             setSourceParams(sourceId, src, true);
-            attachAudioToSource(sourceId, src.getAudioData());
+            attachAudioToSource(sourceId, src.getAudioData(), false);
             chanSrcs[index] = src;
 
             // play the channel
-            alSourcePlay(sourceId);
+            al.alSourcePlay(sourceId);
         }
     }
 
@@ -890,12 +986,11 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                 return;
             }
 
-            //assert src.getStatus() == Status.Stopped || src.getChannel() == -1;
-
             if (src.getStatus() == Status.Playing) {
                 return;
             } else if (src.getStatus() == Status.Stopped) {
-
+                assert src.getChannel() != -1;
+                
                 // allocate channel to this source
                 int index = newChannel();
                 if (index == -1) {
@@ -912,10 +1007,10 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
 
                 chanSrcs[index] = src;
                 setSourceParams(channels[index], src, false);
-                attachAudioToSource(channels[index], data);
+                attachAudioToSource(channels[index], data, src.isLooping());
             }
 
-            alSourcePlay(channels[src.getChannel()]);
+            al.alSourcePlay(channels[src.getChannel()]);
             src.setStatus(Status.Playing);
         }
     }
@@ -936,7 +1031,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
             if (src.getStatus() == Status.Playing) {
                 assert src.getChannel() != -1;
 
-                alSourcePause(channels[src.getChannel()]);
+                al.alSourcePause(channels[src.getChannel()]);
                 src.setStatus(Status.Paused);
             }
         }
@@ -962,16 +1057,9 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                 src.setChannel(-1);
                 clearChannel(chan);
                 freeChannel(chan);
-
+                
                 if (src.getAudioData() instanceof AudioStream) {
-                    AudioStream stream = (AudioStream) src.getAudioData();
-                    if (stream.isOpen()) {
-                        stream.close();
-                    }
-
-                    // And free the audio since it cannot be
-                    // played again anyway.
-                    deleteAudioData(src.getAudioData());
+                    ((AudioStream)src.getAudioData()).setTime(0);
                 }
             }
         }
@@ -1002,7 +1090,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         int id = ab.getId();
         if (ab.getId() == -1) {
             ib.position(0).limit(1);
-            alGenBuffers(ib);
+            al.alGenBuffers(1, ib);
             id = ib.get(0);
             ab.setId(id);
 
@@ -1010,7 +1098,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
         }
 
         ab.getData().clear();
-        alBufferData(id, convertFormat(ab), ab.getData(), ab.getSampleRate());
+        al.alBufferData(id, convertFormat(ab), ab.getData(), ab.getData().capacity(), ab.getSampleRate());
         ab.clearUpdateNeeded();
     }
 
@@ -1021,7 +1109,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
 
         int[] ids = new int[STREAMING_BUFFER_COUNT];
         ib.position(0).limit(STREAMING_BUFFER_COUNT);
-        alGenBuffers(ib);
+        al.alGenBuffers(STREAMING_BUFFER_COUNT, ib);
         ib.position(0).limit(STREAMING_BUFFER_COUNT);
         ib.get(ids);
 
@@ -1044,7 +1132,9 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
     public void deleteFilter(Filter filter) {
         int id = filter.getId();
         if (id != -1) {
-            EFX10.alDeleteFilters(id);
+            ib.position(0).limit(1);
+            ib.put(id).flip();
+            efx.alDeleteFilters(1, ib);
         }
     }
 
@@ -1066,7 +1156,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                 if (id != -1) {
                     ib.put(0, id);
                     ib.position(0).limit(1);
-                    alDeleteBuffers(ib);
+                    al.alDeleteBuffers(1, ib);
                     ab.resetObject();
                 }
             } else if (ad instanceof AudioStream) {
@@ -1075,7 +1165,7 @@ public class LwjglAudioRenderer implements AudioRenderer, Runnable {
                 if (ids != null) {
                     ib.clear();
                     ib.put(ids).flip();
-                    alDeleteBuffers(ib);
+                    al.alDeleteBuffers(ids.length, ib);
                     as.resetObject();
                 }
             }
