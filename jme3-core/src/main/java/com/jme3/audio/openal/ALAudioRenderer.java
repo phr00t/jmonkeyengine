@@ -819,12 +819,18 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
                     }
                 } else {
                     // jME3 state does not match OAL state.
-                    throw new AssertionError();
+                    //throw new AssertionError();
+                    // we'll force status set here...
+                    src.setStatus(oalStatus);
+                    if(oalStatus == Status.Stopped) {
+                        stopSource(src);
+                    }
                 }
             } else {
                 // Stopped channel was not cleared correctly.
                 if (oalStatus == Status.Stopped) {
-                    throw new AssertionError();
+                    //throw new AssertionError();
+                    stopSource(src);
                 }
             }
         }
