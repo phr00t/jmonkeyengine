@@ -82,6 +82,7 @@
         <package>com.jme3.cursors.plugins</package>
         <package>com.jme3.audio</package>
         <package>com.jme3.audio.plugins</package>
+        <package>com.jme3.audio.openal</package>
         <package>com.jme3.texture</package>
         <package>com.jme3.texture.plugins</package>
         <package>com.jme3.texture.image</package>
