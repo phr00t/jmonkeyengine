@@ -87,8 +87,67 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
         this.alc = alc;
         this.efx = efx;
     }
-    
-    private void initOpenAL() {
+
+    public void initialize() {
+        if (!decoderThread.isAlive()) {
+            // Set high priority to avoid buffer starvation.
+            decoderThread.setDaemon(true);
+            decoderThread.setPriority(Thread.NORM_PRIORITY + 1);
+            decoderThread.start();
+        } else {
+            throw new IllegalStateException("Initialize already called");
+        }
+    }
+
+    private void checkDead() {
+        if (decoderThread.getState() == Thread.State.TERMINATED) {
+            throw new IllegalStateException("Decoding thread is terminated");
+        }
+    }
+
+    public void run() {
+        initInDecoderThread();
+        
+        // Notify render thread that OAL context is available.
+        synchronized (threadLock) {
+            threadLock.set(true);
+            threadLock.notifyAll();
+        }
+
+        long updateRateNanos = (long) (UPDATE_RATE * 1000000000);
+        mainloop:
+        while (true) {
+            long startTime = System.nanoTime();
+
+            if (Thread.interrupted()) {
+                break;
+            }
+
+            synchronized (threadLock) {
+                updateInDecoderThread(UPDATE_RATE);
+            }
+
+            long endTime = System.nanoTime();
+            long diffTime = endTime - startTime;
+
+            if (diffTime < updateRateNanos) {
+                long desiredEndTime = startTime + updateRateNanos;
+                while (System.nanoTime() < desiredEndTime) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException ex) {
+                        break mainloop;
+                    }
+                }
+            }
+        }
+
+        synchronized (threadLock) {
+            cleanupInDecoderThread();
+        }
+    }
+
+    public void initInDecoderThread() {
         try {
             if (!alc.isCreated()) {
                 alc.createALC();
@@ -169,8 +228,8 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
             logger.log(Level.WARNING, "OpenAL EFX not available! Audio effects won't work.");
         }
     }
-    
-    private void destroyOpenAL() {
+
+    public void cleanupInDecoderThread() {
         if (audioDisabled) {
             alc.destroyALC();
             return;
@@ -207,71 +266,15 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
         alc.destroyALC();
     }
 
-    public void initialize() {
-        if (decoderThread.isAlive()) {
-            throw new IllegalStateException("Initialize already called");
-        }
-        
-        // Initialize OpenAL context.
-        initOpenAL();
-
-        // Initialize decoder thread.
-        // Set high priority to avoid buffer starvation.
-        decoderThread.setDaemon(true);
-        decoderThread.setPriority(Thread.NORM_PRIORITY + 1);
-        decoderThread.start();
-    }
-
-    private void checkDead() {
-        if (decoderThread.getState() == Thread.State.TERMINATED) {
-            throw new IllegalStateException("Decoding thread is terminated");
-        }
-    }
-
-    public void run() {
-        long updateRateNanos = (long) (UPDATE_RATE * 1000000000);
-        mainloop:
-        while (true) {
-            long startTime = System.nanoTime();
-
-            if (Thread.interrupted()) {
-                break;
-            }
-
-            synchronized (threadLock) {
-                updateInDecoderThread(UPDATE_RATE);
-            }
-
-            long endTime = System.nanoTime();
-            long diffTime = endTime - startTime;
-
-            if (diffTime < updateRateNanos) {
-                long desiredEndTime = startTime + updateRateNanos;
-                while (System.nanoTime() < desiredEndTime) {
-                    try {
-                        Thread.sleep(1);
-                    } catch (InterruptedException ex) {
-                        break mainloop;
-                    }
-                }
-            }
-        }
-    }
-
     public void cleanup() {
         // kill audio thread
-        if (!decoderThread.isAlive()) {
-            return;
+        if (decoderThread.isAlive()) {
+            decoderThread.interrupt();
+            try {
+                decoderThread.join();
+            } catch (InterruptedException ex) {
+            }
         }
-        
-        decoderThread.interrupt();
-        try {
-            decoderThread.join();
-        } catch (InterruptedException ex) {
-        }
-        
-        // destroy OpenAL context
-        destroyOpenAL();
     }
 
     private void updateFilter(Filter f) {
@@ -301,6 +304,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
     public void updateSourceParam(AudioSource src, AudioParam param) {
         checkDead();
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
@@ -527,6 +536,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
     public void updateListenerParam(Listener listener, ListenerParam param) {
         checkDead();
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
@@ -593,6 +608,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
     public void setEnvironment(Environment env) {
         checkDead();
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled || !supportEfx) {
                 return;
             }
@@ -871,6 +892,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
     public void setListener(Listener listener) {
         checkDead();
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
@@ -906,6 +933,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
     public void playSourceInstance(AudioSource src) {
         checkDead();
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
@@ -943,6 +976,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
     public void playSource(AudioSource src) {
         checkDead();
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
@@ -979,6 +1018,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
     public void pauseSource(AudioSource src) {
         checkDead();
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
@@ -994,6 +1039,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
 
     public void stopSource(AudioSource src) {
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
@@ -1089,6 +1140,12 @@ public class ALAudioRenderer implements AudioRenderer, Runnable {
 
     public void deleteAudioData(AudioData ad) {
         synchronized (threadLock) {
+            while (!threadLock.get()) {
+                try {
+                    threadLock.wait();
+                } catch (InterruptedException ex) {
+                }
+            }
             if (audioDisabled) {
                 return;
             }
