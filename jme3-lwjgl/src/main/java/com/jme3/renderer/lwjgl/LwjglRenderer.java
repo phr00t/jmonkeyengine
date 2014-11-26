@@ -1228,7 +1228,8 @@ public class LwjglRenderer implements Renderer {
     }
 
     public void copyFrameBuffer(FrameBuffer src, FrameBuffer dst, boolean copyDepth) {
-        if (caps.contains(Caps.FrameBufferBlit)) {
+        // ERROR, causing Rift to not work here... we'll just assume this is supported!
+        //if (caps.contains(Caps.FrameBufferBlit)) {
             int srcX0 = 0;
             int srcY0 = 0;
             int srcX1;
@@ -1297,10 +1298,10 @@ public class LwjglRenderer implements Renderer {
                 logger.log(Level.SEVERE, "Dest FBO:\n{0}", dst);
                 throw ex;
             }
-        } else {
-            throw new RendererException("EXT_framebuffer_blit required.");
+        //} else {
+        //    throw new RendererException("EXT_framebuffer_blit required.");
             // TODO: support non-blit copies?
-        }
+        //}
     }
 
     private String getTargetBufferName(int buffer) {
