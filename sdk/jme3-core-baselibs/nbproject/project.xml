@@ -79,6 +79,7 @@
         <package>com.jme3.shader.plugins</package>
         <package>com.jme3.renderer</package>
         <package>com.jme3.renderer.queue</package>
+        <package>com.jme3.renderer.opengl</package>
         <package>com.jme3.cursors.plugins</package>
         <package>com.jme3.audio</package>
         <package>com.jme3.audio.plugins</package>
