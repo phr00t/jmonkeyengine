@@ -114,6 +114,19 @@ public class Node extends Spatial implements Savable {
 
             child.setLightListRefresh();
         }
+
+        // Make sure next updateGeometricState() visits this branch
+        // to update lights.
+        Spatial p = parent;
+        while (p != null) {
+            if (p.refreshFlags != 0) {
+                // any refresh flag is sufficient, 
+                // as each propagates to the root Node
+                return; 
+            }
+            p.refreshFlags |= RF_CHILD_LIGHTLIST;
+            p = p.parent;
+        }
     }
 
     @Override
@@ -154,6 +167,11 @@ public class Node extends Spatial implements Savable {
 
     @Override
     public void updateGeometricState(){
+        if (refreshFlags == 0) {
+            // This branch has no geometric state that requires updates.
+            return;
+        }
+        
         if ((refreshFlags & RF_LIGHTLIST) != 0){
             updateWorldLightList();
         }
@@ -164,6 +182,8 @@ public class Node extends Spatial implements Savable {
             updateWorldTransforms();
         }
 
+        refreshFlags &= ~RF_CHILD_LIGHTLIST;
+        
         if (!children.isEmpty()) {
             // the important part- make sure child geometric state is refreshed
             // first before updating own world bound. This saves
@@ -638,5 +658,4 @@ public class Node extends Spatial implements Savable {
     protected void breadthFirstTraversal(SceneGraphVisitor visitor, Queue<Spatial> queue) {
         queue.addAll(children);
     }
-
 }
