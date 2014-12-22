@@ -35,6 +35,7 @@
         <package>com.jme3.scene.plugins.blender.cameras</package>
         <package>com.jme3.scene.plugins.blender.modifiers</package>
         <package>com.jme3.scene.plugins.blender.animations</package>
+        <package>com.jme3.scene.plugins.blender.math</package>
         <package>com.jme3.asset</package>
         <package>jme3tools.converters</package>
         <package>jme3tools.converters.model</package>
