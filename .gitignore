@@ -122,3 +122,4 @@
 *.so
 *.jnilib
 *.dylib
+/sdk/dist/
