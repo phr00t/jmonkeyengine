@@ -30,10 +30,8 @@ dependencies {
     optlibs project(':jme3-jogl')
     optlibs project(':jme3-android')
     optlibs project(':jme3-ios')
-    if(buildNativeProjects == "true"){
-        optlibs project(':jme3-android-native')
-        optlibs project(':jme3-bullet-native')
-    }
+    optlibs project(':jme3-android-native')
+    optlibs project(':jme3-bullet-native')
     testdatalibs project(':jme3-testdata')
 
     examplelibs project(':jme3-examples')
@@ -52,7 +50,7 @@ task checkPlatformConfig {
         if(!netbeansFolder.exists()){
             println "Downloading NetBeans Platform base, this only has to be done once.."
             def f = file("netbeans.zip")
-            new URL("http://download.netbeans.org/netbeans/8.0/final/zip/netbeans-8.0-201403101706-javase.zip").withInputStream{ i -> f.withOutputStream{ it << i }}
+            new URL(netbeansUrl).withInputStream{ i -> f.withOutputStream{ it << i }}
             copy{
                 from zipTree(f)
                 into "../"
