@@ -360,10 +360,14 @@ public final class NativeLibraryLoader {
             String fileNameInJarWithoutExtension 
                     = fileNameInJar.substring(0, fileNameInJar.lastIndexOf("."));
             
-            if (platform.is64Bit() && !fileNameInJarWithoutExtension.endsWith("64")) {
-                // This is to avoid conflicts with 32-bit versions of the 
-                // same library when extracting.
-                fileNameInJarWithoutExtension += "64";
+            if( platform != Platform.MacOSX64 && platform != Platform.MacOSX_PPC64 ) {
+                // don't do this for 64-bit mac machines, it still looks for the file without 64 in it
+                // see: http://steamcommunity.com/app/329770/discussions/0/627456486887900004/?tscn=1421202778#c622954302087795643
+                if (platform.is64Bit() && !fileNameInJarWithoutExtension.endsWith("64")) {
+                    // This is to avoid conflicts with 32-bit versions of the 
+                    // same library when extracting.
+                    fileNameInJarWithoutExtension += "64";
+                }
             }
             
             String systemJniExtension;

@@ -706,7 +706,7 @@ public class RenderManager {
         if (scene instanceof Node) {
             // Recurse for all children
             Node n = (Node) scene;
-            List<Spatial> children = n.getChildren();
+            SafeArrayList<Spatial> children = (SafeArrayList)n.getChildren();
             // Saving cam state for culling
             int camState = vp.getCamera().getPlaneState();
             for (int i = 0; i < children.size(); i++) {
