@@ -4,7 +4,10 @@ if (!hasProperty('mainClass')) {
     ext.mainClass = 'jme3test.TestChooser'
 }
 
-//mainClassName = ext.mainClass
+task run(dependsOn: 'build', type:JavaExec) {
+   main = mainClass
+   classpath = sourceSets.main.runtimeClasspath
+}
 
 dependencies {
     compile project(':jme3-blender')
@@ -12,6 +15,7 @@ dependencies {
     compile project(':jme3-desktop')
     compile project(':jme3-effects')
 //    compile project(':jme3-bullet')
+//    compile project(':jme3-bullet-native')
     compile project(':jme3-jbullet')
     compile project(':jme3-jogg')
 //    compile project(':jme3-jogl')
@@ -87,11 +91,9 @@ task dist (dependsOn: ['build', ':jme3-jogl:jar', ':jme3-bullet:jar']) << {
         into '../dist/opt/native-bullet'
         rename {project(':jme3-bullet').name+".jar"}
     }
-    if(buildNativeProjects == "true"){
-        copy { 
-            from project(':jme3-bullet-native').jar.archivePath
-            into '../dist/opt/native-bullet'
-            rename {"jme3-bullet-natives.jar"}
-        }
+    copy { 
+        from project(':jme3-bullet-native').jar.archivePath
+        into '../dist/opt/native-bullet'
+        rename {"jme3-bullet-natives.jar"}
     }
 }
