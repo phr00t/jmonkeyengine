@@ -16,12 +16,21 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>org.netbeans.api.progress</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <release-version>1</release-version>
+                        <specification-version>1.38.1</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>org.netbeans.modules.projectapi</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
                         <release-version>1</release-version>
-                        <specification-version>1.50.1</specification-version>
+                        <specification-version>1.60.2</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -30,7 +39,7 @@
                     <compile-dependency/>
                     <run-dependency>
                         <release-version>1</release-version>
-                        <specification-version>1.65.1.8</specification-version>
+                        <specification-version>1.78.1.8</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -38,7 +47,7 @@
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
-                        <specification-version>8.5.1</specification-version>
+                        <specification-version>8.12.1</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -46,7 +55,7 @@
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
-                        <specification-version>8.29.3</specification-version>
+                        <specification-version>8.39.1</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -54,7 +63,7 @@
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
-                        <specification-version>8.19.1</specification-version>
+                        <specification-version>8.25.1</specification-version>
                     </run-dependency>
                 </dependency>
             </module-dependencies>

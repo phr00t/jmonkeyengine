@@ -32,14 +32,13 @@
 package com.jme3.gde.core;
 
 import com.jme3.gde.core.scene.SceneApplication;
-import com.jme3.gde.upgrader.Upgrader;
 import java.io.File;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JPopupMenu;
 import org.openide.filesystems.FileChooserBuilder;
 import org.openide.modules.ModuleInstall;
-import org.openide.util.Exceptions;
+import org.openide.modules.Places;
 import org.openide.util.NbBundle;
 import org.openide.util.NbPreferences;
 
@@ -75,16 +74,6 @@ public class Installer extends ModuleInstall {
         //select project folder
         String projectDir = NbPreferences.forModule(Installer.class).get("projects_path", null);
         if (projectDir == null) {
-            try {
-                Upgrader.checkUpgrade();
-                NbPreferences.forModule(Installer.class).sync();
-                logger.log(Level.INFO, "Synced settings");
-            } catch (Exception ex) {
-                Exceptions.printStackTrace(ex);
-            }
-            projectDir = NbPreferences.forModule(Installer.class).get("projects_path", null);
-        }
-        if (projectDir == null) {
             javax.swing.JFileChooser fr = new javax.swing.JFileChooser();
             javax.swing.filechooser.FileSystemView fw = fr.getFileSystemView();
             projectDir = fw.getDefaultDirectory().getAbsolutePath();
@@ -103,7 +92,7 @@ public class Installer extends ModuleInstall {
         System.setProperty("netbeans.projects.dir", projectDir);
 
         //set extraction dir for platform natives
-        String jmpDir = System.getProperty("netbeans.user");
+        String jmpDir = Places.getUserDirectory().getAbsolutePath();
         File file = new File(jmpDir);
         if (!file.exists()) {
             logger.log(Level.INFO, "Create settings dir {0}", projectDir);

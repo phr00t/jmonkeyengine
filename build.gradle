@@ -11,9 +11,9 @@ subprojects {
     //    }
 }
 
-task run(dependsOn: ':jme3-examples:run') {
-    description = 'Run the jME3 examples'
-}
+//task run(dependsOn: ':jme3-examples:run') {
+//    description = 'Run the jME3 examples'
+//}
 
 defaultTasks 'run'
 
@@ -69,7 +69,10 @@ task copyLibs(type: Copy){
     into "$buildDir/libDist/lib-ext" //buildDir.path + '/' + libsDirName + '/lib'
 }
 
-task dist(dependsOn: [':jme3-examples:dist', 'mergedJavadoc']){
+//task dist(dependsOn: [':jme3-examples:dist', 'mergedJavadoc']){
+//    description 'Creates a jME3 examples distribution with all jme3 binaries, sources, javadoc and external libraries under ./dist'
+//}
+task dist(dependsOn: ['mergedJavadoc']){
     description 'Creates a jME3 examples distribution with all jme3 binaries, sources, javadoc and external libraries under ./dist'
 }
 
