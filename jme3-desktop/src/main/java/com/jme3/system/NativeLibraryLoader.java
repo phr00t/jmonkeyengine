@@ -40,6 +40,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -128,8 +130,8 @@ public final class NativeLibraryLoader {
         registerNativeLibrary("lwjgl", Platform.Windows64, "native/windows/lwjgl64.dll");
         registerNativeLibrary("lwjgl", Platform.Linux32,   "native/linux/liblwjgl.so");
         registerNativeLibrary("lwjgl", Platform.Linux64,   "native/linux/liblwjgl64.so");
-        registerNativeLibrary("lwjgl", Platform.MacOSX32,  "native/macosx/liblwjgl.jnilib");
-        registerNativeLibrary("lwjgl", Platform.MacOSX64,  "native/macosx/liblwjgl.jnilib");
+        registerNativeLibrary("lwjgl", Platform.MacOSX32,  "native/macosx/liblwjgl.dylib");
+        registerNativeLibrary("lwjgl", Platform.MacOSX64,  "native/macosx/liblwjgl.dylib");
         
         // OpenAL
         registerNativeLibrary("openal", Platform.Windows32, "native/windows/OpenAL32.dll", false);
@@ -278,6 +280,154 @@ public final class NativeLibraryLoader {
             }
         }
     }
+    
+    public static File[] getJarsWithNatives() {
+        HashSet<File> jarFiles = new HashSet<File>();
+        for (Map.Entry<NativeLibrary.Key, NativeLibrary> lib : nativeLibraryMap.entrySet()) {
+            File jarFile = getJarForNativeLibrary(lib.getValue().getPlatform(), lib.getValue().getName());
+            if (jarFile != null) {
+                jarFiles.add(jarFile);
+            }
+        }
+        return jarFiles.toArray(new File[0]);
+    }
+    
+    public static void extractNativeLibraries(Platform platform, File targetDir) throws IOException {
+        for (Map.Entry<NativeLibrary.Key, NativeLibrary> lib : nativeLibraryMap.entrySet()) {
+            if (lib.getValue().getPlatform() == platform) {
+                if (!targetDir.exists()) {
+                    targetDir.mkdirs();
+                }
+                extractNativeLibrary(platform, lib.getValue().getName(), targetDir);
+            }
+        }
+    }
+    
+    private static String mapLibraryName_emulated(String name, Platform platform) {
+        switch (platform) {
+            case MacOSX32:
+            case MacOSX64:
+                return name + ".dylib";
+            case Windows32:
+            case Windows64:
+                return name + ".dll";
+            default:
+                return name + ".so";
+        }
+    }
+    
+    public static File getJarForNativeLibrary(Platform platform, String name) {
+        NativeLibrary library = nativeLibraryMap.get(new NativeLibrary.Key(name, platform));
+        if (library == null) {
+            return null;
+        }
+
+        String pathInJar = library.getPathInNativesJar();
+        if (pathInJar == null) {
+            return null;
+        }
+        
+        String fileNameInJar;
+        if (pathInJar.contains("/")) {
+            fileNameInJar = pathInJar.substring(pathInJar.lastIndexOf("/") + 1);
+        } else {
+            fileNameInJar = pathInJar;
+        }
+        
+        URL url = Thread.currentThread().getContextClassLoader().getResource(pathInJar);
+        if (url == null) {
+            url = Thread.currentThread().getContextClassLoader().getResource(fileNameInJar);
+        }
+        
+        if (url == null) {
+            return null;
+        }
+        
+        StringBuilder sb = new StringBuilder(url.toString());
+        if (sb.indexOf("jar:file:/") == 0) {
+            sb.delete(0, 9);
+            sb.delete(sb.indexOf("!"), sb.length());
+            return new File(sb.toString());
+        } else {
+            return null; // not a jar
+        }
+    }
+    
+    public static void extractNativeLibrary(Platform platform, String name, File targetDir) throws IOException {
+        NativeLibrary library = nativeLibraryMap.get(new NativeLibrary.Key(name, platform));
+        if (library == null) {
+            return;
+        }
+
+        String pathInJar = library.getPathInNativesJar();
+        if (pathInJar == null) {
+            return;
+        }
+        
+        String fileNameInJar;
+        if (pathInJar.contains("/")) {
+            fileNameInJar = pathInJar.substring(pathInJar.lastIndexOf("/") + 1);
+        } else {
+            fileNameInJar = pathInJar;
+        }
+        
+        URL url = Thread.currentThread().getContextClassLoader().getResource(pathInJar);
+        if (url == null) {
+            url = Thread.currentThread().getContextClassLoader().getResource(fileNameInJar);
+        }
+        
+        if (url == null) {
+            return;
+        }
+        
+        String loadedAsFileName;
+        if (library.isJNI()) {
+            String fileNameInJarWithoutExtension 
+                    = fileNameInJar.substring(0, fileNameInJar.lastIndexOf("."));
+            
+//            if (platform.is64Bit() && !fileNameInJarWithoutExtension.endsWith("64")) {
+//                fileNameInJarWithoutExtension += "64";
+//            }
+            
+            String systemJniExtension;
+            String dummyLib = mapLibraryName_emulated("", platform);
+            if (dummyLib.contains(".")) {
+                systemJniExtension = dummyLib.substring(dummyLib.lastIndexOf("."));
+            } else {
+                systemJniExtension = "";
+            }
+            
+            loadedAsFileName = fileNameInJarWithoutExtension + systemJniExtension;
+        } else {
+            loadedAsFileName = fileNameInJar;
+        }
+        
+        URLConnection conn = url.openConnection();
+        InputStream in = conn.getInputStream();
+        
+        File targetFile = new File(targetDir, loadedAsFileName);
+        OutputStream out = null;
+        try {
+            out = new FileOutputStream(targetFile);
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                out.write(buf, 0, len);
+            }
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ex) {
+                }
+            }
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ex) {
+                }
+            }
+        }
+    }
 
     /**
      * First extracts the native library and then loads it.
@@ -360,15 +510,11 @@ public final class NativeLibraryLoader {
             String fileNameInJarWithoutExtension 
                     = fileNameInJar.substring(0, fileNameInJar.lastIndexOf("."));
             
-            if( platform != Platform.MacOSX64 && platform != Platform.MacOSX_PPC64 ) {
-                // don't do this for 64-bit mac machines, it still looks for the file without 64 in it
-                // see: http://steamcommunity.com/app/329770/discussions/0/627456486887900004/?tscn=1421202778#c622954302087795643
-                if (platform.is64Bit() && !fileNameInJarWithoutExtension.endsWith("64")) {
-                    // This is to avoid conflicts with 32-bit versions of the 
-                    // same library when extracting.
-                    fileNameInJarWithoutExtension += "64";
-                }
-            }
+//            if (platform.is64Bit() && !fileNameInJarWithoutExtension.endsWith("64")) {
+//                // This is to avoid conflicts with 32-bit versions of the 
+//                // same library when extracting.
+//                fileNameInJarWithoutExtension += "64";
+//            }
             
             String systemJniExtension;
             String dummyLib = System.mapLibraryName("");
