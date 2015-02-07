@@ -35,6 +35,6 @@ include 'jme3-testdata'
 // Example projects
 include 'jme3-examples'
 
-//if(buildSdkProject == "true"){
-//    include 'sdk'
-//}
+if(buildSdkProject == "true"){
+    include 'sdk'
+}
