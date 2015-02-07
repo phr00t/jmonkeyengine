@@ -61,6 +61,13 @@ public class LwjglDisplay extends LwjglAbstractDisplay {
                     return mode;
                 }
             }
+            // couldn't find best display mode, try picking one with the proper resolution at least
+            // better than failing completely!
+            for(DisplayMode mode : modes) {
+                if(mode.getWidth() == width && mode.getHeight() == height) {
+                    return mode;
+                }
+            }
         } catch (LWJGLException ex) {
             listener.handleError("Failed to acquire fullscreen display mode!", ex);
         }
