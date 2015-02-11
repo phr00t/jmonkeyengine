@@ -129,6 +129,11 @@ public class GLRenderer implements Renderer {
     public EnumSet<Caps> getCaps() {
         return caps;
     }
+    
+    // Not making public yet ...
+    public EnumMap<Limits, Integer> getLimits() {
+        return limits;
+    }
 
     private static HashSet<String> loadExtensions(String extensions) {
         HashSet<String> extensionSet = new HashSet<String>(64);
@@ -418,13 +423,33 @@ public class GLRenderer implements Renderer {
             caps.add(Caps.SeamlessCubemap);
         }
         
-        if (hasExtension("GL_ARB_get_program_binary")) {
-            // OK ..
-            int binaryFormats = getInteger(GLExt.GL_NUM_PROGRAM_BINARY_FORMATS);
-            System.out.println("Binary Formats: " + binaryFormats);
-        }
+//        if (hasExtension("GL_ARB_get_program_binary")) {
+//            int binaryFormats = getInteger(GLExt.GL_NUM_PROGRAM_BINARY_FORMATS);
+//        }
         
-        logger.log(Level.FINE, "Caps: {0}", caps);
+        // Print context information
+        logger.log(Level.INFO, "OpenGL Renderer Information\n" +
+                               " * Vendor: {0}\n" +
+                               " * Renderer: {1}\n" +
+                               " * OpenGL Version: {2}\n" +
+                               " * GLSL Version: {3}",
+                               new Object[]{ 
+                                   gl.glGetString(GL.GL_VENDOR), 
+                                   gl.glGetString(GL.GL_RENDERER),
+                                   gl.glGetString(GL.GL_VERSION),
+                                   gl.glGetString(GL.GL_SHADING_LANGUAGE_VERSION)
+                               });
+        
+        // Print capabilities (if fine logging is enabled)
+        if (logger.isLoggable(Level.FINE)) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Supported capabilities: \n");
+            for (Caps cap : caps)
+            {
+                sb.append("\t").append(cap.toString()).append("\n");
+            }
+            logger.log(Level.FINE, sb.toString());
+        }
         
         texUtil.initialize(caps);
     }
@@ -558,25 +583,6 @@ public class GLRenderer implements Renderer {
             context.depthFunc = state.getDepthFunc();
         }
 
-//        if (gl2 != null) {
-//            if (state.isAlphaTest() && !context.alphaTestEnabled) {
-//                gl2.glEnable(GL2.GL_ALPHA_TEST);
-//                gl2.glAlphaFunc(convertTestFunction(context.alphaFunc), context.alphaTestFallOff);
-//                context.alphaTestEnabled = true;
-//            } else if (!state.isAlphaTest() && context.alphaTestEnabled) {
-//                gl2.glDisable(GL2.GL_ALPHA_TEST);
-//                context.alphaTestEnabled = false;
-//            }
-//            if (state.getAlphaFallOff() != context.alphaTestFallOff) {
-//                gl2.glAlphaFunc(convertTestFunction(context.alphaFunc), context.alphaTestFallOff);   
-//                context.alphaTestFallOff = state.getAlphaFallOff();
-//            }         
-//            if (state.getAlphaFunc() != context.alphaFunc) {
-//                gl2.glAlphaFunc(convertTestFunction(state.getAlphaFunc()), context.alphaTestFallOff);
-//                context.alphaFunc = state.getAlphaFunc();
-//            }
-//        }
-
         if (state.isDepthWrite() && !context.depthWriteEnabled) {
             gl.glDepthMask(true);
             context.depthWriteEnabled = true;
@@ -675,7 +681,9 @@ public class GLRenderer implements Renderer {
             if (state.getBlendMode() == RenderState.BlendMode.Off) {
                 gl.glDisable(GL.GL_BLEND);
             } else {
-                gl.glEnable(GL.GL_BLEND);
+                if (context.blendMode == RenderState.BlendMode.Off) {
+                    gl.glEnable(GL.GL_BLEND);
+                }
                 switch (state.getBlendMode()) {
                     case Off:
                         break;
@@ -1111,14 +1119,22 @@ public class GLRenderer implements Renderer {
             needRegister = true;
         }
 
+        // If using GLSL 1.5, we bind the outputs for the user
+        // For versions 3.3 and up, user should use layout qualifiers instead.
+        boolean bindFragDataRequired = false;
+        
         for (ShaderSource source : shader.getSources()) {
             if (source.isUpdateNeeded()) {
                 updateShaderSourceData(source);
             }
+            if (source.getType() == ShaderType.Fragment
+                    && source.getLanguage().equals("GLSL150")) {
+                bindFragDataRequired = true;
+            }
             gl.glAttachShader(id, source.getId());
         }
 
-        if (caps.contains(Caps.OpenGL30) && gl3 != null) {
+        if (bindFragDataRequired) {
             // Check if GLSL version is 1.5 for shader
             gl3.glBindFragDataLocation(id, 0, "outFragColor");
             // For MRT
@@ -2077,19 +2093,12 @@ public class GLRenderer implements Renderer {
         Image[] textures = context.boundTextures;
 
         int type = convertTextureType(tex.getType(), image.getMultiSamples(), -1);
-//        if (!context.textureIndexList.moveToNew(unit)) {
-//             if (context.boundTextureUnit != unit){
-//                gl.glActiveTexture(GL.GL_TEXTURE0 + unit);
-//                context.boundTextureUnit = unit;
-//             }
-//             gl.glEnable(type);
-//        }
-
-        if (context.boundTextureUnit != unit) {
-            gl.glActiveTexture(GL.GL_TEXTURE0 + unit);
-            context.boundTextureUnit = unit;
-        }
         if (textures[unit] != image) {
+            if (context.boundTextureUnit != unit) {
+                gl.glActiveTexture(GL.GL_TEXTURE0 + unit);
+                context.boundTextureUnit = unit;
+            }
+
             gl.glBindTexture(type, texId);
             textures[unit] = image;
 
@@ -2104,21 +2113,6 @@ public class GLRenderer implements Renderer {
     public void modifyTexture(Texture tex, Image pixels, int x, int y) {
 //        setTexture(0, tex);
 //        texUtil.uploadSubTexture(caps, pixels, convertTextureType(tex.getType(), pixels.getMultiSamples(), -1), 0, x, y, linearizeSrgbImages);
-    }
-
-    public void clearTextureUnits() {
-//        IDList textureList = context.textureIndexList;
-//        Image[] textures = context.boundTextures;
-//        for (int i = 0; i < textureList.oldLen; i++) {
-//            int idx = textureList.oldList[i];
-//            if (context.boundTextureUnit != idx){
-//                gl.glActiveTexture(GL.GL_TEXTURE0 + idx);
-//                context.boundTextureUnit = idx;
-//            }
-//            gl.glDisable(convertTextureType(textures[idx].getType()));
-//            textures[idx] = null;
-//        }
-//        context.textureIndexList.copyNewToOld();
     }
 
     public void deleteImage(Image image) {
@@ -2590,7 +2584,6 @@ public class GLRenderer implements Renderer {
             drawTriangleArray(mesh.getMode(), count, mesh.getVertexCount());
         }
         clearVertexAttribs();
-        clearTextureUnits();
     }
 
     private void renderMeshDefault(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {
@@ -2639,7 +2632,6 @@ public class GLRenderer implements Renderer {
             drawTriangleArray(mesh.getMode(), count, mesh.getVertexCount());
         }
         clearVertexAttribs();
-        clearTextureUnits();
     }
 
     public void renderMesh(Mesh mesh, int lod, int count, VertexBuffer[] instanceData) {

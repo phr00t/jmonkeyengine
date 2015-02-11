@@ -256,7 +256,7 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
     public TouchInput getTouchInput() {
         return null;
     }
-    
+
     public void setAutoFlushFrames(boolean enabled){
         this.autoFlush = enabled;
     }
