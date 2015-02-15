@@ -52,7 +52,9 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
     private Color color;
     private String name;
     private String techName;
+    private NodeToolBar toolBar;
     protected List<String> filePaths = new ArrayList<String>();
+    protected Shader.ShaderType shaderType;
 
 //    private List listeners = Collections.synchronizedList(new LinkedList());
 //
@@ -98,6 +100,7 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
     @SuppressWarnings("LeakingThisInConstructor")
     public NodePanel(ShaderNodeBlock node, ShaderNodeDefinition def) {
         super();
+        shaderType = def.getType();
         if (def.getType() == Shader.ShaderType.Vertex) {
             type = NodePanel.NodeType.Vertex;
         } else {
@@ -112,6 +115,7 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
         this.filePaths.addAll(def.getShadersPath());
         String defPath = ((DefinitionBlock) node.getContents().get(0)).getPath();
         this.filePaths.add(defPath);
+        toolBar = new NodeToolBar(this);
     }
 
     /**
@@ -125,6 +129,7 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
         this.type = type;
         init(new ArrayList<ShaderNodeVariable>(), outputs);
         addKeyListener(this);
+        toolBar = new NodeToolBar(this);
     }
 
     public final void refresh(ShaderNodeBlock node) {
@@ -201,14 +206,18 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
         }
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, // Anti-alias!
                 RenderingHints.VALUE_ANTIALIAS_ON);
-       // Color[] colors = {new Color(0, 0, 0, 0.7f), new Color(0, 0, 0, 0.15f)};
+        // Color[] colors = {new Color(0, 0, 0, 0.7f), new Color(0, 0, 0, 0.15f)};
         if (diagram.selectedItem == this) {
             Color[] colors = new Color[]{new Color(0.6f, 0.6f, 1.0f, 0.8f), new Color(0.6f, 0.6f, 1.0f, 0.5f)};
             float[] factors = {0f, 1f};
             g.setPaint(new RadialGradientPaint(getWidth() / 2, getHeight() / 2, getWidth() / 2, factors, colors));
             g.fillRoundRect(8, 3, getWidth() - 10, getHeight() - 6, 15, 15);
-        }        
-       
+        }else{
+            if(toolBar.isVisible()){
+                toolBar.setVisible(false);
+            }
+        }
+
         g.setColor(new Color(170, 170, 170, 120));
         g.fillRoundRect(5, 1, getWidth() - 9, getHeight() - 6, 15, 15);
         g.setColor(boderColor);
@@ -253,6 +262,11 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
     public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
         diagram.select(this);
+        showToolBar();
+    }
+    
+    private void showToolBar(){
+        toolBar.display();
     }
 
     public NodeType getType() {
@@ -299,6 +313,16 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
         color = type.getColor();
     }
 
+    public void edit() {
+        if (type == NodeType.Fragment || type == NodeType.Vertex) {
+            diagram.showEdit(NodePanel.this);
+        }
+    }
+    
+    public void cleanup(){
+        toolBar.getParent().remove(toolBar);
+    }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -318,18 +342,6 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
         header.addMouseMotionListener(labelMouseMotionListener);
         header.setHorizontalAlignment(SwingConstants.LEFT);
         header.setFont(new Font("Tahoma", Font.BOLD, 11));
-        header.addMouseListener(new MouseAdapter() {
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                //if(e.getClickCount()==2){
-                if (type == NodeType.Fragment || type == NodeType.Vertex) {
-                    diagram.showEdit(NodePanel.this);
-                }
-                //}
-            }
-
-        });
 
         content = new JPanel();
         content.setOpaque(false);
@@ -409,6 +421,7 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
 
     public Dot createDot(String type, Dot.ParamType paramType, String paramName) {
         Dot dot1 = new Dot();
+        dot1.setShaderTypr(shaderType);
         dot1.setNode(this);
         dot1.setText(paramName);
         dot1.setParamType(paramType);
@@ -423,10 +436,14 @@ public class NodePanel extends DraggablePanel implements Selectable, PropertyCha
     public void keyPressed(KeyEvent e) {
 
         if (e.getKeyCode() == KeyEvent.VK_DELETE) {
-            Diagram diag = getDiagram();
-            if (diag.selectedItem == this) {
-                diag.removeSelectedNode();
-            }
+            delete();
+        }
+    }
+
+    public void delete() {
+        Diagram diag = getDiagram();
+        if (diag.selectedItem == this) {
+            diag.removeSelectedNode();
         }
     }
 

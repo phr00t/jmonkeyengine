@@ -60,6 +60,8 @@ public class MaterialPreviewRenderer implements SceneListener {
         Sphere sphMesh = new Sphere(32, 32, 2.5f);
         sphMesh.setTextureMode(Sphere.TextureMode.Projected);
         sphMesh.updateGeometry(32, 32, 2.5f, false, false);
+        Logger log = Logger.getLogger(TangentBinormalGenerator.class.getName());
+        log.setLevel(Level.SEVERE);
         TangentBinormalGenerator.generate(sphMesh);
         sphere = new Geometry("previewSphere", sphMesh);
         sphere.setLocalRotation(new Quaternion().fromAngleAxis(FastMath.QUARTER_PI, Vector3f.UNIT_X));
@@ -147,7 +149,7 @@ public class MaterialPreviewRenderer implements SceneListener {
         for (MatParam matParam : mat.getParams()) {
             dummy.setParam(matParam.getName(), matParam.getVarType(), matParam.getValue());
         }
-        
+        dummy.selectTechnique(mat.getActiveTechnique().getDef().getName(), SceneApplication.getApplication().getRenderManager());
         dummy.getAdditionalRenderState().set(mat.getAdditionalRenderState());        
 
         //creating a dummy geom and assigning the dummy material to it

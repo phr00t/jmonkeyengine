@@ -5,6 +5,7 @@
 package com.jme3.gde.materialdefinition.editor;
 
 import com.jme3.gde.core.assets.ProjectAssetManager;
+import com.jme3.gde.core.scene.SceneApplication;
 import com.jme3.gde.materialdefinition.dialog.AddAttributeDialog;
 import com.jme3.gde.materialdefinition.dialog.AddMaterialParameterDialog;
 import com.jme3.gde.materialdefinition.dialog.AddNodeDialog;
@@ -294,6 +295,7 @@ public class Diagram extends JPanel implements MouseListener, MouseMotionListene
                     }
                 }
 
+                selectedNode.cleanup();
                 remove(selectedNode);
                 selectedItem = null;
                 repaint();
@@ -418,6 +420,8 @@ public class Diagram extends JPanel implements MouseListener, MouseMotionListene
                 return doSelect(outBusPanel);
             }
         }
+        
+        
         return doSelect(null);
     }
 
