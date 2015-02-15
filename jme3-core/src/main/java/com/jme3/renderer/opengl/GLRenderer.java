@@ -1134,7 +1134,7 @@ public class GLRenderer implements Renderer {
             gl.glAttachShader(id, source.getId());
         }
 
-        if (bindFragDataRequired) {
+        if (bindFragDataRequired && gl3 != null) {
             // Check if GLSL version is 1.5 for shader
             gl3.glBindFragDataLocation(id, 0, "outFragColor");
             // For MRT
@@ -2523,13 +2523,13 @@ public class GLRenderer implements Renderer {
         int id = mesh.getId();
         if (id == -1) {
             IntBuffer temp = intBuf1;
-            gl3.glGenVertexArrays(temp);
+            if( gl3 != null ) gl3.glGenVertexArrays(temp);
             id = temp.get(0);
             mesh.setId(id);
         }
 
         if (context.boundVertexArray != id) {
-            gl3.glBindVertexArray(id);
+            if( gl3 != null ) gl3.glBindVertexArray(id);
             context.boundVertexArray = id;
         }
 
@@ -2567,7 +2567,7 @@ public class GLRenderer implements Renderer {
         }
 
         if (context.boundVertexArray != mesh.getId()) {
-            gl3.glBindVertexArray(mesh.getId());
+            if( gl3 != null ) gl3.glBindVertexArray(mesh.getId());
             context.boundVertexArray = mesh.getId();
         }
 
