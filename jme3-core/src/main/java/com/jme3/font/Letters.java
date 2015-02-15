@@ -319,12 +319,15 @@ public class Letters {
     
     void validateSize() {
         if (totalWidth < 0) {
-            totalWidth = Math.abs(head.getX1() - tail.getPrevious().getX1());
             LetterQuad l = head;
+            float left = head.getX1();
+            float right = left;
             while (!l.isTail()) {
+                if( l.getX1() > right ) right = l.getX1();
                 l = l.getNext();
                 totalHeight = Math.max(totalHeight, -l.getY1());
             }
+            totalWidth = Math.abs(left - right);
         }
     }
 
