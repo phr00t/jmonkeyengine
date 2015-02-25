@@ -39,7 +39,6 @@
         <package>com.jme3.asset</package>
         <package>jme3tools.converters</package>
         <package>jme3tools.converters.model</package>
-        <package>jme3tools.converters.model.strip</package>
         <package>jme3tools.shader</package>
         <package>jme3tools.optimize</package>
         <package>jme3tools.shadercheck</package>
