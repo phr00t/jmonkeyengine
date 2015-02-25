@@ -81,7 +81,7 @@ public class MaterialExtensionLoader {
                 tex.setWrap(WrapMode.Repeat);
             } catch (AssetNotFoundException ex){
                 logger.log(Level.WARNING, "Cannot locate {0} for material {1}", new Object[]{texKey, key});
-                tex = new Texture2D( PlaceholderAssets.getPlaceholderImage() );
+                tex = new Texture2D( PlaceholderAssets.getPlaceholderImage(assetManager) );
                 tex.setWrap(WrapMode.Repeat);
                 tex.setKey(texKey);
             }
@@ -104,6 +104,7 @@ public class MaterialExtensionLoader {
         }
 
         material = new Material(assetManager, matExt.getJmeMatDefName());
+        material.setName(matName);
         for (Statement extMatStat : statement.getContents()){
             readExtendingMaterialStatement(extMatStat);
         }

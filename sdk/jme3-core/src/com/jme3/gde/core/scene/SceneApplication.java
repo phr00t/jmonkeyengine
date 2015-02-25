@@ -136,9 +136,11 @@ public class SceneApplication extends Application implements LookupProvider {
     public SceneApplication() {
         Logger.getLogger("com.jme3").addHandler(logHandler);
         useCanvas = "true".equals(NbPreferences.forModule(Installer.class).get("use_lwjgl_canvas", "false"));
+        Logger.getLogger("com.jme3.renderer.opengl.TextureUtil").setLevel(Level.SEVERE);
         try {
             AppSettings newSetting = new AppSettings(true);
             newSetting.setFrameRate(30);
+            newSetting.setGammaCorrection(true);
             if (!useCanvas) {
                 newSetting.setCustomRenderer(AwtPanelsContext.class);
             }
@@ -169,7 +171,7 @@ public class SceneApplication extends Application implements LookupProvider {
             return ((JmeCanvasContext) getContext()).getCanvas();
         } else {
             if (panel == null) {
-                panel = ((AwtPanelsContext) getContext()).createPanel(PaintMode.Accelerated);
+                panel = ((AwtPanelsContext) getContext()).createPanel(PaintMode.Accelerated, true);
                 ((AwtPanelsContext) getContext()).setInputSource(panel);
                 attachPanel();
             }
@@ -219,8 +221,11 @@ public class SceneApplication extends Application implements LookupProvider {
                 {
                     overlayView = getRenderManager().createMainView("Overlay", cam);
                     overlayView.setClearFlags(false, true, false);
-                    guiViewPort.setClearFlags(false, false, false);
+                    guiViewPort.setClearFlags(false, false, false);                    
                 }
+                ColorRGBA color = new ColorRGBA();
+                color.setAsSrgb(0.25f, 0.25f, 0.25f, 1.0f);
+                viewPort.setBackgroundColor(color);
                 //create camera controller
                 camController = new SceneCameraController(cam, inputManager);
                 //create preview view
@@ -270,7 +275,7 @@ public class SceneApplication extends Application implements LookupProvider {
         super.destroy();
     }
 
-    @Override
+    @Override    
     public void update() {
         if (!started) {
             try {
@@ -294,7 +299,7 @@ public class SceneApplication extends Application implements LookupProvider {
                     fpsText.setText("Frames per second: " + fps);
                     secondCounter = 0.0f;
                 }
-                getStateManager().update(tpf);
+                getStateManager().update(tpf);                
                 toolsNode.updateLogicalState(tpf);
                 if (fakap != null) {
                     fakap.updateFake(tpf);
@@ -514,10 +519,6 @@ public class SceneApplication extends Application implements LookupProvider {
         }
     }
 
-    private void resetCam() {
-        cam.setLocation(new Vector3f(0, 0, 10));
-        cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
-    }
 
     private void setWindowTitle(final String string) {
         SceneViewerTopComponent.findInstance().setDisplayName(string);
@@ -632,7 +633,7 @@ public class SceneApplication extends Application implements LookupProvider {
         NotifyUtil.show("Error starting OpenGL context!", "Click here to go to troubleshooting web page.", MessageType.EXCEPTION, lst, 0);
         logger.log(Level.INFO, exception.getMessage(), exception);
     }
-    private static ActionListener lst = new ActionListener() {
+    private static final ActionListener lst = new ActionListener() {
         public void actionPerformed(ActionEvent e) {
             try {
                 HtmlBrowser.URLDisplayer.getDefault().showURL(new URL("http://jmonkeyengine.org/wiki/doku.php/sdk:troubleshooting"));

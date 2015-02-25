@@ -64,9 +64,8 @@ public class ScenePreviewProcessor implements SceneProcessor {
     private FrameBuffer offBuffer;
     private ViewPort offView;
     private Camera offCamera;
-    private ConcurrentLinkedQueue<PreviewRequest> previewQueue = new ConcurrentLinkedQueue<PreviewRequest>();
-    private PreviewRequest currentPreviewRequest;
-    private RenderManager rm;
+    private final ConcurrentLinkedQueue<PreviewRequest> previewQueue = new ConcurrentLinkedQueue<PreviewRequest>();
+    private PreviewRequest currentPreviewRequest;    
     private PointLight light;
 
     public void addRequest(PreviewRequest request) {
@@ -88,7 +87,9 @@ public class ScenePreviewProcessor implements SceneProcessor {
         // create a pre-view. a view that is rendered before the main view
         if (offView == null) {
             offView = SceneApplication.getApplication().getRenderManager().createPreView("Offscreen View", offCamera);
-            offView.setBackgroundColor(ColorRGBA.DarkGray);
+            ColorRGBA color = new ColorRGBA();
+            color.setAsSrgb(0.25f, 0.25f, 0.25f, 1.0f);
+            offView.setBackgroundColor(color);
             offView.setClearFlags(true, true, true);
             offView.addProcessor(this);
             // setup framebuffer's scene
@@ -113,8 +114,9 @@ public class ScenePreviewProcessor implements SceneProcessor {
         offCamera.lookAt(new Vector3f(0f, 0f, 0f), Vector3f.UNIT_Y);
 
         //setup framebuffer to use texture
-        offBuffer.setDepthBuffer(Format.Depth);
+        offBuffer.setDepthBuffer(Format.Depth);        
         offBuffer.setColorBuffer(Format.RGBA8);
+        offBuffer.setSrgb(true);
 
         //set viewport to render to offscreen framebuffer
         offView.setOutputFrameBuffer(offBuffer);
@@ -123,7 +125,7 @@ public class ScenePreviewProcessor implements SceneProcessor {
     }
 
     public void initialize(RenderManager rm, ViewPort vp) {
-        this.rm = rm;
+       
     }
 
     public void reshape(ViewPort vp, int i, int i1) {
@@ -182,7 +184,7 @@ public class ScenePreviewProcessor implements SceneProcessor {
                 byte g = cpuArray[i + 1];
                 byte r = cpuArray[i + 2];
                 byte a = cpuArray[i + 3];
-
+                
                 cpuArray[i + 0] = a;
                 cpuArray[i + 1] = b;
                 cpuArray[i + 2] = g;

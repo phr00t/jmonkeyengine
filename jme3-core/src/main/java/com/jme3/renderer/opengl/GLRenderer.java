@@ -1062,6 +1062,10 @@ public class GLRenderer implements Renderer {
             }
         }
         
+        if (linearizeSrgbImages) {
+            stringBuf.append("#define SRGB 1\n");
+        }
+        
         stringBuf.append(source.getDefines());
         stringBuf.append(source.getSource());
         
@@ -1563,12 +1567,12 @@ public class GLRenderer implements Renderer {
                 updateFrameBuffer(fb);
             }
 
+            // update viewport to reflect framebuffer's resolution
+            setViewPort(0, 0, fb.getWidth(), fb.getHeight());
+            
             if (context.boundFBO != fb.getId()) {
                 glfbo.glBindFramebufferEXT(GLExt.GL_FRAMEBUFFER_EXT, fb.getId());
                 statistics.onFrameBufferUse(fb, true);
-
-                // update viewport to reflect framebuffer's resolution
-                setViewPort(0, 0, fb.getWidth(), fb.getHeight());
 
                 context.boundFBO = fb.getId();
             } else {
@@ -2111,8 +2115,9 @@ public class GLRenderer implements Renderer {
     }
 
     public void modifyTexture(Texture tex, Image pixels, int x, int y) {
-//        setTexture(0, tex);
-//        texUtil.uploadSubTexture(caps, pixels, convertTextureType(tex.getType(), pixels.getMultiSamples(), -1), 0, x, y, linearizeSrgbImages);
+        setTexture(0, tex);
+        int target = convertTextureType(tex.getType(), pixels.getMultiSamples(), -1);
+        texUtil.uploadSubTexture(pixels, target, 0, x, y, linearizeSrgbImages);
     }
 
     public void deleteImage(Image image) {
