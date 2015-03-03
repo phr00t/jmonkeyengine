@@ -4,7 +4,6 @@
  */
 package com.jme3.gde.materials;
 
-import com.jme3.asset.DesktopAssetManager;
 import com.jme3.asset.MaterialKey;
 import com.jme3.gde.core.assets.ProjectAssetManager;
 import com.jme3.gde.core.scene.PreviewRequest;
@@ -25,6 +24,7 @@ import com.jme3.scene.shape.Sphere;
 import com.jme3.util.MaterialDebugAppState;
 import com.jme3.util.TangentBinormalGenerator;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.ImageIcon;
@@ -43,6 +43,7 @@ public class MaterialPreviewRenderer implements SceneListener {
     private Material currentMaterial;
     private boolean init = false;
     private final JLabel label;
+    private final ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(5);
 
     public enum DisplayType {
 
@@ -80,16 +81,22 @@ public class MaterialPreviewRenderer implements SceneListener {
     }
 
     @SuppressWarnings("unchecked")
-    public void showMaterial(ProjectAssetManager assetManager, String materialFileName) {
+    public void showMaterial(final ProjectAssetManager assetManager,final String materialFileName) {
         if (!init) {
             init();
         }
-        MaterialKey key = new MaterialKey(assetManager.getRelativeAssetPath(materialFileName));
-        assetManager.deleteFromCache(key);
-        Material mat = (Material) assetManager.loadAsset(key);
-        if (mat != null) {
-            showMaterial(mat);
-        }
+        exec.execute(new Runnable() {
+
+            public void run() {
+                MaterialKey key = new MaterialKey(assetManager.getRelativeAssetPath(materialFileName));
+                assetManager.deleteFromCache(key);
+                Material mat = (Material) assetManager.loadAsset(key);
+                if (mat != null) {
+                    showMaterial(mat);
+                }
+            }
+        });
+        
 
     }
 
@@ -230,5 +237,6 @@ public class MaterialPreviewRenderer implements SceneListener {
 
     public void cleanUp() {
         SceneApplication.getApplication().removeSceneListener(this);
+        exec.shutdownNow();
     }
 }

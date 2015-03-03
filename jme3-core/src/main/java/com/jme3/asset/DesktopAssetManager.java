@@ -45,6 +45,7 @@ import com.jme3.shader.Glsl150ShaderGenerator;
 import com.jme3.shader.Shader;
 import com.jme3.shader.ShaderGenerator;
 import com.jme3.shader.ShaderKey;
+import com.jme3.system.JmeSystem;
 import com.jme3.texture.Texture;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,6 +80,10 @@ public class DesktopAssetManager implements AssetManager {
 
     public DesktopAssetManager(){
         this(null);
+    }
+    
+    public DesktopAssetManager(boolean usePlatformConfig){
+        this(usePlatformConfig ? JmeSystem.getPlatformAssetConfigURL() : null);
     }
 
     public DesktopAssetManager(URL configFile){
@@ -445,16 +450,11 @@ public class DesktopAssetManager implements AssetManager {
                 }
                 shader = shaderGenerator.generateShader();
             } else {
-                String vertName = key.getVertName();
-                String fragName = key.getFragName();
-
-                String vertSource = (String) loadAsset(new AssetKey(vertName));
-                String fragSource = (String) loadAsset(new AssetKey(fragName));
-
                 shader = new Shader();
                 shader.initialize();
-                shader.addSource(Shader.ShaderType.Vertex, vertName, vertSource, key.getDefines().getCompiled(), key.getVertexShaderLanguage());
-                shader.addSource(Shader.ShaderType.Fragment, fragName, fragSource, key.getDefines().getCompiled(), key.getFragmentShaderLanguage());
+                for (Shader.ShaderType shaderType : key.getUsedShaderPrograms()) {
+                    shader.addSource(shaderType,key.getShaderProgramName(shaderType),(String) loadAsset(new AssetKey(key.getShaderProgramName(shaderType))),key.getDefines().getCompiled(),key.getShaderProgramLanguage(shaderType));
+                }
             }
 
             cache.addToCache(key, shader);

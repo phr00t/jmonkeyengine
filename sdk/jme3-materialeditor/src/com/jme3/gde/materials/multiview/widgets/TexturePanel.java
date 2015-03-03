@@ -18,7 +18,9 @@ import com.jme3.texture.Texture;
 import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import javax.swing.Icon;
+import javax.swing.SwingUtilities;
 import jme3tools.converters.ImageToAwt;
 import org.openide.util.ImageUtilities;
 
@@ -28,12 +30,13 @@ import org.openide.util.ImageUtilities;
  */
 public class TexturePanel extends MaterialPropertyWidget {
 
-    private TexturePropertyEditor editor;
-    private ProjectAssetManager manager;
+    private final TexturePropertyEditor editor;
+    private final ProjectAssetManager manager;
     private boolean flip = false;
     private boolean repeat = false;
     private String textureName = null;
     private DDSPreview ddsPreview;
+    private final ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
 
     /** Creates new form SelectionPanel */
     public TexturePanel(ProjectAssetManager manager) {
@@ -44,29 +47,27 @@ public class TexturePanel extends MaterialPropertyWidget {
 
     private void displayPreview() {
         if (!"".equals(textureName)) {
-            Texture tex = manager.loadTexture(textureName);
-            Icon newicon = null;
-            if (textureName.toLowerCase().endsWith(".dds")) {
-                if (ddsPreview == null) {
-                    ddsPreview = new DDSPreview(manager);
-                }
-                ddsPreview.requestPreview(textureName, "", 80, 80, texturePreview, null);
-            } else {
-                newicon = ImageUtilities.image2Icon(resizeImage(ImageToAwt.convert(tex.getImage(), false, true, 0)));
-            }
-            texturePreview.setIcon(newicon);
-        }
-    }
+            exec.execute(new Runnable() {
 
-    private String getName(String path) {
-        int idx = path.lastIndexOf("/");
-        if (idx != -1 && path.length() > idx + 1) {
-            path = path.substring(idx + 1, path.length());
+                public void run() {
+
+                    Texture tex = manager.loadTexture(textureName);
+                    if (textureName.toLowerCase().endsWith(".dds")) {
+                        if (ddsPreview == null) {
+                            ddsPreview = new DDSPreview(manager);
+                        }
+                        ddsPreview.requestPreview(textureName, "", 80, 80, texturePreview, null);
+                    } else {
+                        final Icon newicon = ImageUtilities.image2Icon(resizeImage(ImageToAwt.convert(tex.getImage(), false, true, 0)));
+                        SwingUtilities.invokeLater(new Runnable() {
+                            public void run() {
+                                texturePreview.setIcon(newicon);
+                            }
+                        });
+                    }
+                }
+            });
         }
-        if (path.length() > 15) {
-            path = path.substring(0, 15) + "..";
-        }
-        return path;
     }
 
     private void updateFlipRepeat() {
@@ -313,6 +314,7 @@ public class TexturePanel extends MaterialPropertyWidget {
         if (ddsPreview != null) {
             ddsPreview.cleanUp();
         }
+        exec.shutdownNow();
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
