@@ -450,6 +450,7 @@ public class FilterPostProcessor implements SceneProcessor, Savable {
                 Texture2D msDepth = new Texture2D(width, height, numSamples, Format.Depth);
                 renderFrameBufferMS.setDepthTexture(msDepth);
                 renderFrameBufferMS.setColorTexture(msColor);
+                filterTexture = msColor;
                 depthTexture = msDepth;
             } else {
                 renderFrameBufferMS.setDepthBuffer(Format.Depth);
