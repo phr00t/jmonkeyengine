@@ -38,6 +38,8 @@ import com.jme3.renderer.*;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image.Format;
+import com.jme3.texture.Texture;
+import com.jme3.texture.Texture.MagFilter;
 import com.jme3.texture.Texture2D;
 import com.jme3.ui.Picture;
 import com.jme3.util.SafeArrayList;
@@ -448,7 +450,6 @@ public class FilterPostProcessor implements SceneProcessor, Savable {
                 Texture2D msDepth = new Texture2D(width, height, numSamples, Format.Depth);
                 renderFrameBufferMS.setDepthTexture(msDepth);
                 renderFrameBufferMS.setColorTexture(msColor);
-                filterTexture = msColor;
                 depthTexture = msDepth;
             } else {
                 renderFrameBufferMS.setDepthBuffer(Format.Depth);

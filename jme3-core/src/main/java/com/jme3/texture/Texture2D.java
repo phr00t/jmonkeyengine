@@ -61,8 +61,13 @@ public class Texture2D extends Texture {
         super();
         setImage(img);
         if (img.getFormat().isDepthFormat()){
+            //depth textures always have nearest
             setMagFilter(MagFilter.Nearest);
             setMinFilter(MinFilter.NearestNoMipMaps);
+        } else if(img.getData(0) == null){
+            // keep the magfilter bilinear for proper filter downsampling
+            setMinFilter(MinFilter.NearestNoMipMaps);     
+            setMagFilter(MagFilter.Bilinear);
         }
     }
 
