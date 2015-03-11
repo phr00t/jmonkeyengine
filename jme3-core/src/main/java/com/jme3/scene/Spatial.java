@@ -51,6 +51,7 @@ import com.jme3.util.SafeArrayList;
 import com.jme3.util.TempVars;
 import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -348,10 +349,8 @@ public abstract class Spatial implements Savable, Cloneable, Collidable, Cloneab
      */
     public boolean checkCulling(Camera cam) {
         if (refreshFlags != 0) {
-            throw new IllegalStateException("Scene graph is not properly updated for rendering.\n"
-                    + "State was changed after rootNode.updateGeometricState() call. \n"
-                    + "Make sure you do not modify the scene from another thread!\n"
-                    + "Problem spatial name: " + getName());
+            // this crash is the bane of my existance... instead of crashing, just log a warning & continue
+            logger.log(Level.WARNING, "Warning: spatial ''{0}'' was modified after updateGeometricState()!", getName());
         }
 
         CullHint cm = getCullHint();
