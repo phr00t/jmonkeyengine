@@ -91,7 +91,7 @@ public class SphereCollisionShape extends CollisionShape {
 //        new SphereShape(radius);
 //        objectId.setLocalScaling(Converter.convert(getScale()));
 //        objectId.setMargin(margin);
-        setScale(scale);
+        //setScale(scale); //why call setScale if it just causes a warning?
         setMargin(margin);
     }
     
