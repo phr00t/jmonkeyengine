@@ -1542,13 +1542,7 @@ public class GLRenderer implements Renderer {
                     setTexture(0, rb.getTexture());
 
                     int textureType = convertTextureType(tex.getType(), tex.getImage().getMultiSamples(), rb.getFace());
-                    if (gl2 != null) {
-                        gl2.glEnable(textureType);
-                    }
                     glfbo.glGenerateMipmapEXT(textureType);
-                    if (gl2 != null) {
-                        gl2.glDisable(textureType);
-                    }
                 }
             }
         }
@@ -2000,7 +1994,7 @@ public class GLRenderer implements Renderer {
             // Image does not have mipmaps, but they are required.
             // Generate from base level.
 
-            if (!caps.contains(Caps.OpenGL30) && gl2 != null) {
+            if (!caps.contains(Caps.FrameBuffer) && gl2 != null) {
                 gl2.glTexParameteri(target, GL2.GL_GENERATE_MIPMAP, GL.GL_TRUE);
                 img.setMipmapsGenerated(true);
             } else {
@@ -2087,11 +2081,9 @@ public class GLRenderer implements Renderer {
             img.setMultiSamples(imageSamples);
         }
 
-        if (caps.contains(Caps.OpenGL30) || gl2 == null) {
+        if (caps.contains(Caps.FrameBuffer) || gl2 == null) {
             if (!img.hasMipmaps() && img.isGeneratedMipmapsRequired() && img.getData(0) != null) {
-                if (gl2 != null) gl2.glEnable(target); // XXX: Required for ATI
                 glfbo.glGenerateMipmapEXT(target);
-                if (gl2 != null) gl2.glDisable(target);
                 img.setMipmapsGenerated(true);
             }
         }
