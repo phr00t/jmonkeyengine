@@ -468,7 +468,7 @@ public class DesktopAssetManager implements AssetManager {
     @Override
     public ShaderGenerator getShaderGenerator(EnumSet<Caps> caps) {
         if (shaderGenerator == null) {
-            if(caps.contains(Caps.GLSL150)){
+            if(caps.contains(Caps.GLSL150) && caps.contains(Caps.TextureMultisample)){
                 shaderGenerator = new Glsl150ShaderGenerator(this);
             }else{
                 shaderGenerator = new Glsl100ShaderGenerator(this);
