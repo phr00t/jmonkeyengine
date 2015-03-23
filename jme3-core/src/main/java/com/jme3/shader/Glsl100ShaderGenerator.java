@@ -110,7 +110,7 @@ public class Glsl100ShaderGenerator extends ShaderGenerator {
     protected void generateVaryings(StringBuilder source, ShaderGenerationInfo info, ShaderType type) {
         source.append("\n");
         for (ShaderNodeVariable var : info.getVaryings()) {
-            declareVarying(source, var, type == ShaderType.Vertex ? false : true);
+            declareVarying(source, var, (type != ShaderType.Vertex));
         }
     }
 

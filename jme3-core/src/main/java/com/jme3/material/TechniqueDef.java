@@ -91,7 +91,7 @@ public class TechniqueDef implements Savable {
         PostPass,
     }
 
-    private EnumSet<Caps> requiredCaps = EnumSet.noneOf(Caps.class);
+    private final EnumSet<Caps> requiredCaps = EnumSet.noneOf(Caps.class);
     private String name;
 
     private EnumMap<Shader.ShaderType,String> shaderLanguage;
@@ -267,6 +267,8 @@ public class TechniqueDef implements Savable {
             }else if(shaderType.equals(Shader.ShaderType.TessellationControl)){
                 requiredCaps.add(Caps.TesselationShader);
             }
+            Caps cap = Caps.valueOf(shaderLanguage.get(shaderType));
+            requiredCaps.add(cap);
         }
         usesShaders=true;
     }
