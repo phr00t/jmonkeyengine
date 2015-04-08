@@ -30,11 +30,11 @@ include 'jme3-bullet-native-android' //cpp
 include 'jme3-android-native' //cpp
 
 // Test Data project
-//include 'jme3-testdata'
+include 'jme3-testdata'
 
 // Example projects
-//include 'jme3-examples'
+include 'jme3-examples'
 
-//if(buildSdkProject == "true"){
-//    include 'sdk'
-//}
+if(buildSdkProject == "true"){
+    include 'sdk'
+}
