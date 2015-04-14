@@ -678,9 +678,13 @@ public class RenderManager {
             // Saving cam state for culling
             int camState = vp.getCamera().getPlaneState();
             for (int i = 0; i < children.size(); i++) {
-                // Restoring cam state before proceeding children recusively
-                vp.getCamera().setPlaneState(camState);
-                renderSubScene(children.get(i), vp);
+                // put this in a try block, incase children have changed (avoids a crash)
+                try {
+                    Spatial s = children.get(i);
+                    // Restoring cam state before proceeding children recusively
+                    vp.getCamera().setPlaneState(camState);
+                    renderSubScene(s, vp);
+                } catch(Exception e) { }
             }
         } else if (scene instanceof Geometry) {
             // add to the render queue
