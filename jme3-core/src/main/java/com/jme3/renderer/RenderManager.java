@@ -58,6 +58,7 @@ import com.jme3.util.SafeArrayList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -684,7 +685,9 @@ public class RenderManager {
                     // Restoring cam state before proceeding children recusively
                     vp.getCamera().setPlaneState(camState);
                     renderSubScene(s, vp);
-                } catch(Exception e) { }
+                } catch(Exception e) {
+                    logger.log(Level.WARNING, "renderSubScene crash contained: {0}", e.toString());
+                }
             }
         } else if (scene instanceof Geometry) {
             // add to the render queue
