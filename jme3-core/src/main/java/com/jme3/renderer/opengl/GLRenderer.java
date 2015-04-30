@@ -1426,7 +1426,7 @@ public class GLRenderer implements Renderer {
         Image image = tex.getImage();
         if (image.isUpdateNeeded()) {
             // Check NPOT requirements
-            checkNonPowerOfTwo(tex);
+            //checkNonPowerOfTwo(tex);
             
             updateTexImageData(image, tex.getType(), 0);
 
@@ -2097,7 +2097,7 @@ public class GLRenderer implements Renderer {
         Image image = tex.getImage();
         if (image.isUpdateNeeded() || (image.isGeneratedMipmapsRequired() && !image.isMipmapsGenerated())) {
             // Check NPOT requirements
-            checkNonPowerOfTwo(tex);
+            //checkNonPowerOfTwo(tex);
             
             updateTexImageData(image, tex.getType(), unit);
         }
