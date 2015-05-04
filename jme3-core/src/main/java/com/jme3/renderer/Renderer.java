@@ -364,5 +364,10 @@ public interface Renderer {
       * @see Caps#Srgb
       */
      public void setLinearizeSrgbImages(boolean linearize);
+     
+     /**
+      * Get's a GL String from the Renderer
+      */
+     public String getGlString(int gl_string_id);
 
 }

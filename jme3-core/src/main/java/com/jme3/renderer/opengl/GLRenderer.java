@@ -487,6 +487,10 @@ public class GLRenderer implements Renderer {
         texUtil.initialize(caps);
     }
     
+    public String getGlString(int gl_string_id) {
+        return gl.glGetString(gl_string_id);
+    }
+    
     private void loadCapabilities() {
         if (gl2 != null) {
             loadCapabilitiesGL2();

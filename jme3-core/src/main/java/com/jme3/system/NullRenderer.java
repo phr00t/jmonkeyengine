@@ -164,4 +164,9 @@ public class NullRenderer implements Renderer {
     public void readFrameBufferWithFormat(FrameBuffer fb, ByteBuffer byteBuf, Image.Format format) {        
     }
 
+    @Override
+    public String getGlString(int gl_string_id) {
+        return "Null Renderer";
+    }
+
 }

@@ -2546,4 +2546,9 @@ public class OGLESShaderRenderer implements Renderer {
     public void readFrameBufferWithFormat(FrameBuffer fb, ByteBuffer byteBuf, Image.Format format) {
         throw new UnsupportedOperationException("Not supported yet. URA will make that work seamlessly");
     }
+
+    @Override
+    public String getGlString(int gl_string_id) {
+        return GLES20.glGetString(gl_string_id);
+    }
 }
