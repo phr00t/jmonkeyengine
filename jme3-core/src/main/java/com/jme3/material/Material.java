@@ -266,18 +266,26 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         }
 
         // Comparing parameters
-        for (String paramKey : paramValues.keySet()) {
-            MatParam thisParam = this.getParam(paramKey);
-            MatParam otherParam = other.getParam(paramKey);
+        try {
+            for(int i=0;i<paramValues.size();i++) {
+                String paramKey = paramValues.getKey(i);
 
-            // This param does not exist in compared mat
-            if (otherParam == null) {
-                return false;
-            }
+                MatParam thisParam = this.getParam(paramKey);
+                MatParam otherParam = other.getParam(paramKey);
 
-            if (!otherParam.equals(thisParam)) {
-                return false;
+                // This param does not exist in compared mat
+                if (otherParam == null) {
+                    return false;
+                }
+
+                if (!otherParam.equals(thisParam)) {
+                    return false;
+                }
             }
+        } catch(Exception e) {
+            // parameters changed in another thread, just return false for equals
+            logger.log(Level.WARNING, "Material contentEquals parameter exception: {0}", e.toString());
+            return false;
         }
 
         // Comparing additional render states
