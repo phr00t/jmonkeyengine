@@ -740,28 +740,28 @@ public class BoundingBox extends BoundingVolume {
             if (notEntirelyClipped && (t[0] != saveT0 || t[1] != saveT1)) {
                 if (t[1] > t[0]) {
                     float[] distances = t;
-                    Vector3f point0 = new Vector3f(ray.direction).multLocal(distances[0]).addLocal(ray.origin);
-                    Vector3f point1 = new Vector3f(ray.direction).multLocal(distances[1]).addLocal(ray.origin);
+                    vars.vect3.set(ray.direction).multLocal(distances[0]).addLocal(ray.origin);
+                    vars.vect4.set(ray.direction).multLocal(distances[1]).addLocal(ray.origin);
     
-                    CollisionResult result = new CollisionResult(point0, distances[0]);
-                    results.addCollision(result);
-                    result = new CollisionResult(point1, distances[1]);
-                    results.addCollision(result);
+                    //CollisionResult result = new CollisionResult(point0, distances[0]);
+                    results.addReusedCollision(vars.vect3.x, vars.vect3.y, vars.vect3.z, distances[0]);
+                    //result = new CollisionResult(point1, distances[1]);
+                    results.addReusedCollision(vars.vect4.x, vars.vect4.y, vars.vect4.z, distances[1]);
                     return 2;
+                } else {    
+                    vars.vect3.set(ray.direction).multLocal(t[0]).addLocal(ray.origin);
+                    //CollisionResult result = new CollisionResult(vars.vect3, t[0]);
+                    results.addReusedCollision(vars.vect3.x, vars.vect3.y, vars.vect3.z, t[0]);
+                    return 1;
                 }
-    
-                Vector3f point = new Vector3f(ray.direction).multLocal(t[0]).addLocal(ray.origin);
-                CollisionResult result = new CollisionResult(point, t[0]);
-                results.addCollision(result);
-                return 1;
             }
             return 0;
         } finally {
             vars.release();
         }
     }
-
-    private int collideWithRay(Ray ray) {
+    
+   private int collideWithRay(Ray ray) {
         TempVars vars = TempVars.get();
         try {    
             Vector3f diff = vars.vect1.set(ray.origin).subtractLocal(center);

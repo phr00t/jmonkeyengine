@@ -31,6 +31,7 @@
  */
 package com.jme3.collision;
 
+import com.jme3.math.Vector3f;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -44,13 +45,15 @@ import java.util.List;
  */
 public class CollisionResults implements Iterable<CollisionResult> {
 
-    private ArrayList<CollisionResult> results = null;
+    private ArrayList<CollisionResult> results = null, reusing = null;
     private boolean sorted = true;
+    private int reuseIndex = 0;
 
     /**
      * Clears all collision results added to this list
      */
     public void clear(){
+        reuseIndex = 0;
         if (results != null) {
             results.clear();
         }
@@ -75,6 +78,29 @@ public class CollisionResults implements Iterable<CollisionResult> {
         return results.iterator();
     }
 
+    public CollisionResult addReusedCollision(float pX, float pY, float pZ,
+                                   float distance) {
+        if( results == null ) {
+            results = new ArrayList<CollisionResult>();
+        }
+        if( reusing == null ) {
+            reusing = new ArrayList<CollisionResult>();
+        }
+        CollisionResult reuse;
+        if( reuseIndex >= reusing.size() ) {
+            reuse = new CollisionResult(new Vector3f(pX, pY, pZ), distance);
+            reusing.add(reuse);
+        } else {
+            reuse = reusing.get(reuseIndex);
+            reuse.getContactPoint().set(pX, pY, pZ);
+            reuse.setDistance(distance);
+        }
+        results.add(reuse);
+        sorted = false;
+        reuseIndex++;
+        return reuse;
+    }
+    
     public void addCollision(CollisionResult result){
         if (results == null) {
             results = new ArrayList<CollisionResult>();

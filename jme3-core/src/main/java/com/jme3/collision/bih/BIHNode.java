@@ -317,13 +317,14 @@ public final class BIHNode implements Savable {
         inv.multNormal(r.getDirection(), r.getDirection());
 //        inv.multNormalAcross(r.getDirection(), r.getDirection());
 
-        float[] origins = {r.getOrigin().x,
+        // this is a no-no: allocating float arrays for immediate use? blarny!
+        /*float[] origins = {r.getOrigin().x,
             r.getOrigin().y,
             r.getOrigin().z};
 
         float[] invDirections = {1f / r.getDirection().x,
             1f / r.getDirection().y,
-            1f / r.getDirection().z};
+            1f / r.getDirection().z};*/
 
         r.getDirection().normalizeLocal();
 
@@ -350,8 +351,24 @@ public final class BIHNode implements Savable {
                 int a = node.axis;
 
                 // find the origin and direction value for the given axis
-                float origin = origins[a];
-                float invDirection = invDirections[a];
+                float origin, invDirection;
+                switch( a ) {
+                    default:
+                    case 0: // x
+                        origin = r.getOrigin().x;
+                        invDirection = 1f / r.getDirection().x;
+                        break;
+                    case 1: // y
+                        origin = r.getOrigin().y; 
+                        invDirection = 1f / r.getDirection().y;
+                        break;
+                    case 2: // z
+                        origin = r.getOrigin().z;             
+                        invDirection = 1f / r.getDirection().z;
+                        break;
+                }
+                //float origin = origins[a];
+                //float invDirection = invDirections[a];
 
                 float tNearSplit, tFarSplit;
                 BIHNode nearNode, farNode;
@@ -405,7 +422,9 @@ public final class BIHNode implements Savable {
                         worldMatrix.mult(v1, v1);
                         worldMatrix.mult(v2, v2);
                         worldMatrix.mult(v3, v3);
-                        float t_world = new Ray(o, d).intersects(v1, v2, v3);
+                        vars.ray.setOrigin(o);
+                        vars.ray.setDirection(d);
+                        float t_world = vars.ray.intersects(v1, v2, v3);
                         t = t_world;
                     }
 
@@ -413,10 +432,11 @@ public final class BIHNode implements Savable {
                     Vector3f contactPoint = new Vector3f(d).multLocal(t).addLocal(o);
                     float worldSpaceDist = o.distance(contactPoint);
 
-                    CollisionResult cr = new CollisionResult(contactPoint, worldSpaceDist);
+                    //CollisionResult cr = new CollisionResult(contactPoint, worldSpaceDist);
+                    CollisionResult cr = results.addReusedCollision(contactPoint.x, contactPoint.y, contactPoint.z, worldSpaceDist);
                     cr.setContactNormal(contactNormal);
                     cr.setTriangleIndex(tree.getTriangleIndex(i));
-                    results.addCollision(cr);
+                    //results.addCollision(cr);
                     cols++;
                 }
             }

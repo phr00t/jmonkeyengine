@@ -227,4 +227,5 @@ public class TempVars {
     public final CollisionResults collisionResults = new CollisionResults();
     public final float[] bihSwapTmp = new float[9];
     public final ArrayList<BIHStackData> bihStack = new ArrayList<BIHStackData>();
+    public final Ray ray = new Ray();
 }
