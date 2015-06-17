@@ -206,8 +206,12 @@ public abstract class Filter implements Savable {
      * 
      * @return
      */
-    protected Format getDefaultPassTextureFormat() {
-        return Format.RGB111110F;
+    protected Format getDefaultPassTextureFormat(RenderManager renderManager) {
+        if( renderManager.getRenderer().getCaps().contains(Caps.PackedFloatTexture) ) {
+            return Format.RGB111110F;
+        } else {
+            return Format.RGB8;
+        }
     }
 
     /**
@@ -238,7 +242,7 @@ public abstract class Filter implements Savable {
     protected final void init(AssetManager manager, RenderManager renderManager, ViewPort vp, int w, int h) {
         //  cleanup(renderManager.getRenderer());
         defaultPass = new Pass();
-        defaultPass.init(renderManager.getRenderer(), w, h, getDefaultPassTextureFormat(), getDefaultPassDepthFormat());
+        defaultPass.init(renderManager.getRenderer(), w, h, getDefaultPassTextureFormat(renderManager), getDefaultPassDepthFormat());
         initFilter(manager, renderManager, vp, w, h);
     }
 
