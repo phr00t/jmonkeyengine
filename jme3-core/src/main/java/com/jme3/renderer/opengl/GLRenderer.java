@@ -257,7 +257,11 @@ public class GLRenderer implements Renderer {
 //        gl.glGetInteger(GL.GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, intBuf16);
 //        fragUniforms = intBuf16.get(0);
 //        logger.log(Level.FINER, "Fragment Uniforms: {0}", fragUniforms);
-
+        if (caps.contains(Caps.OpenGLES20)) {
+            limits.put(Limits.VertexUniformVectors, getInteger(GL.GL_MAX_VERTEX_UNIFORM_VECTORS));
+        } else {
+            limits.put(Limits.VertexUniformVectors, getInteger(GL.GL_MAX_VERTEX_UNIFORM_COMPONENTS) / 4);
+        }
         limits.put(Limits.VertexAttributes, getInteger(GL.GL_MAX_VERTEX_ATTRIBS));
         limits.put(Limits.TextureSize, getInteger(GL.GL_MAX_TEXTURE_SIZE));
         limits.put(Limits.CubemapSize, getInteger(GL.GL_MAX_CUBE_MAP_TEXTURE_SIZE));

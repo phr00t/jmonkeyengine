@@ -428,16 +428,17 @@ public final class BIHNode implements Savable {
                         t = t_world;
                     }
 
-                    Vector3f contactNormal = Triangle.computeTriangleNormal(v1, v2, v3, null);
                     Vector3f contactPoint = new Vector3f(d).multLocal(t).addLocal(o);
                     float worldSpaceDist = o.distance(contactPoint);
 
-                    //CollisionResult cr = new CollisionResult(contactPoint, worldSpaceDist);
-                    CollisionResult cr = results.addReusedCollision(contactPoint.x, contactPoint.y, contactPoint.z, worldSpaceDist);
-                    cr.setContactNormal(contactNormal);
-                    cr.setTriangleIndex(tree.getTriangleIndex(i));
-                    //results.addCollision(cr);
-                    cols++;
+                    // don't add the collision if it is longer than the ray length
+                    if( worldSpaceDist <= r.limit ) {
+                        CollisionResult cr = results.addReusedCollision(contactPoint.x, contactPoint.y, contactPoint.z, worldSpaceDist);
+                        Vector3f contactNormal = Triangle.computeTriangleNormal(v1, v2, v3, null);
+                        cr.setContactNormal(contactNormal);
+                        cr.setTriangleIndex(tree.getTriangleIndex(i));
+                        cols++;
+                    }
                 }
             }
         }
