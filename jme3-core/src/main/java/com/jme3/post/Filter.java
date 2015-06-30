@@ -120,7 +120,7 @@ public abstract class Filter implements Savable {
 
 
         }
-
+        
         /**
          *  init the pass called internally
          * @param renderer

@@ -98,7 +98,7 @@ public class FilterPostProcessor implements SceneProcessor, Savable {
      */
     public FilterPostProcessor() {
     }
-
+    
     /**
      * Adds a filter to the filters list<br>
      * @param filter the filter to add
@@ -540,7 +540,7 @@ public class FilterPostProcessor implements SceneProcessor, Savable {
      * @return the filter texture
      */
     public Texture2D getFilterTexture() {
-        return filterTexture;
+        return filterTexture;        
     }
     
     /**
