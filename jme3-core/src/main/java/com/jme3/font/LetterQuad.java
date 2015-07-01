@@ -124,11 +124,11 @@ public class LetterQuad {
         return UNBOUNDED;
     }
 
-    LetterQuad getPrevious() {
+    public LetterQuad getPrevious() {
         return previous;
     }
 
-    LetterQuad getNext() {
+    public LetterQuad getNext() {
         return next;
     }
 

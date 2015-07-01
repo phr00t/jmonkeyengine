@@ -212,6 +212,10 @@ public class BitmapText extends Node {
         letters.invalidate();
         needRefresh = true;
     }
+    
+    public Rectangle getBox() {
+        return block.getTextBox();
+    }
 
     /**
      * @return height of the line
@@ -235,6 +239,14 @@ public class BitmapText extends Node {
         return height;
     }
 
+    public float getHeightSkipBox() {
+        if (needRefresh) {
+            assemble();
+        }
+        float height = getLineHeight() * block.getLineCount();
+        return height;
+    }
+    
     /**
      * @return width of line
      */
