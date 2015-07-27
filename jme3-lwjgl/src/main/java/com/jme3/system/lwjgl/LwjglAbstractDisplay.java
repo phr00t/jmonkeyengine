@@ -54,7 +54,11 @@ import org.lwjgl.opengl.Util;
 public abstract class LwjglAbstractDisplay extends LwjglContext implements Runnable {
 
     private static final Logger logger = Logger.getLogger(LwjglAbstractDisplay.class.getName());
-
+    
+    public static float timeSpentWaitingForVSync;
+    public static boolean enableWaitingForVSyncTiming;
+    private static float timerAccuracy;
+    
     protected AtomicBoolean needClose = new AtomicBoolean(false);
     protected boolean wasActive = false;
     protected int frameRate = 0;
@@ -160,7 +164,14 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
             // calls swap buffers, etc.
             try {
                 if (allowSwapBuffers && autoFlush) {
-                    Display.update(false);
+                    if( enableWaitingForVSyncTiming ) {
+                        if( timerAccuracy == 0 ) timerAccuracy = Sys.getTimerResolution();
+                        timeSpentWaitingForVSync =  Sys.getTime() / timerAccuracy;
+                        Display.update(false);
+                        timeSpentWaitingForVSync = (Sys.getTime() / timerAccuracy) - timeSpentWaitingForVSync;
+                    } else {
+                        Display.update(false);
+                    }
                 } 
             } catch (Throwable ex){
                 listener.handleError("Error while swapping buffers", ex);

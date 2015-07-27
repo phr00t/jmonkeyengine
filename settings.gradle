@@ -39,6 +39,6 @@ if(buildAndroidExamples == "true"){
 	include 'jme3-android-examples'
 }
 
-if(buildSdkProject == "true"){
-    include 'sdk'
-}
+//if(buildSdkProject == "true"){
+//    include 'sdk'
+//}

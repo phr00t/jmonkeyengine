@@ -1,0 +1,4 @@
+git fetch origin pull/$1/head
+git merge FETCH_HEAD
+git mergetool
+
