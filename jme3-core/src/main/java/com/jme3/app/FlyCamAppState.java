@@ -48,11 +48,8 @@ public class FlyCamAppState extends AbstractAppState {
 
     public FlyCamAppState() {
     }    
-
-    /**
-     *  This is called by SimpleApplication during initialize().
-     */
-    void setCamera( FlyByCamera cam ) {
+    
+    public void setCamera( FlyByCamera cam ) {
         this.flyCam = cam;
     }
     
