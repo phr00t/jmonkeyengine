@@ -799,7 +799,7 @@ public class Camera implements Savable, Cloneable {
     public void setFrame(Vector3f location, Vector3f left, Vector3f up,
             Vector3f direction) {
 
-        this.location = location;
+        this.location.set(location);
         this.rotation.fromAxes(left, up, direction);
         onFrameChange();
     }
@@ -855,7 +855,7 @@ public class Camera implements Savable, Cloneable {
      *            the orientation of the camera.
      */
     public void setFrame(Vector3f location, Quaternion axes) {
-        this.location = location;
+        this.location.set(location);
         this.rotation.set(axes);
         onFrameChange();
     }

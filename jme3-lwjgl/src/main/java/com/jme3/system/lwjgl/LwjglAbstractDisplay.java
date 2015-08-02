@@ -55,9 +55,7 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
 
     private static final Logger logger = Logger.getLogger(LwjglAbstractDisplay.class.getName());
     
-    public static float timeSpentWaitingForVSync;
-    public static boolean enableWaitingForVSyncTiming;
-    private static float timerAccuracy;
+    public static Runnable runRightBeforeVSync;
     
     protected AtomicBoolean needClose = new AtomicBoolean(false);
     protected boolean wasActive = false;
@@ -155,6 +153,10 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
 
         listener.update();
         
+        if( runRightBeforeVSync != null ) {
+            runRightBeforeVSync.run();
+        }
+        
         // All this does is call swap buffers
         // If the canvas is not active, there's no need to waste time
         // doing that ..
@@ -164,14 +166,7 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
             // calls swap buffers, etc.
             try {
                 if (allowSwapBuffers && autoFlush) {
-                    if( enableWaitingForVSyncTiming ) {
-                        if( timerAccuracy == 0 ) timerAccuracy = Sys.getTimerResolution();
-                        timeSpentWaitingForVSync =  Sys.getTime() / timerAccuracy;
-                        Display.update(false);
-                        timeSpentWaitingForVSync = (Sys.getTime() / timerAccuracy) - timeSpentWaitingForVSync;
-                    } else {
-                        Display.update(false);
-                    }
+                    Display.update(false);
                 } 
             } catch (Throwable ex){
                 listener.handleError("Error while swapping buffers", ex);
