@@ -170,4 +170,12 @@ public class LwjglMouseInput implements MouseInput {
         }
     }
 
+    public void setNativeCursor(Cursor cursor) {
+        try {
+            Mouse.setNativeCursor(cursor);
+        } catch (LWJGLException ex) {
+            Logger.getLogger(LwjglMouseInput.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
 }

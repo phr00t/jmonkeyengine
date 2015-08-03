@@ -86,5 +86,5 @@ public interface MouseInput extends Input {
      * Sets the cursor to use.
      * @param cursor The cursor to use.
      */
-    public void setNativeCursor(JmeCursor cursor);
+    public void setNativeCursor(JmeCursor cursor);   
 }
