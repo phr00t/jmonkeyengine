@@ -55,8 +55,6 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
 
     private static final Logger logger = Logger.getLogger(LwjglAbstractDisplay.class.getName());
     
-    public static Runnable runRightBeforeVSync;
-    
     protected AtomicBoolean needClose = new AtomicBoolean(false);
     protected boolean wasActive = false;
     protected int frameRate = 0;
@@ -152,10 +150,6 @@ public abstract class LwjglAbstractDisplay extends LwjglContext implements Runna
             throw new IllegalStateException();
 
         listener.update();
-        
-        if( runRightBeforeVSync != null ) {
-            runRightBeforeVSync.run();
-        }
         
         // All this does is call swap buffers
         // If the canvas is not active, there's no need to waste time
