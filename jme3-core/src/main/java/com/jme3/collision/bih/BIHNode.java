@@ -135,13 +135,19 @@ public final class BIHNode implements Savable {
 
     public static final class BIHStackData {
 
-        private final BIHNode node;
-        private final float min, max;
+        private BIHNode node;
+        private float min, max;
 
-        BIHStackData(BIHNode node, float min, float max) {
+        public BIHStackData(BIHNode node, float min, float max) {
             this.node = node;
             this.min = min;
             this.max = max;
+        }
+        
+        public void set(BIHNode node, float min, float max) {
+            this.node = node;
+            this.min = min;
+            this.max = max;            
         }
     }
 
@@ -163,7 +169,8 @@ public final class BIHNode implements Savable {
             box.getCenter().y + box.getYExtent(),
             box.getCenter().z + box.getZExtent()};
 
-        stack.add(new BIHStackData(this, 0, 0));
+        //stack.add(new BIHStackData(this, 0, 0));
+        vars.addStackData(this, 0f, 0f);
 
         Triangle t = new Triangle();
         int cols = 0;
@@ -192,7 +199,8 @@ public final class BIHNode implements Savable {
                 } else if (minExt > node.leftPlane) {
                     node = node.right;
                 } else {
-                    stack.add(new BIHStackData(node.right, 0, 0));
+                    //stack.add(new BIHStackData(node.right, 0, 0));
+                    vars.addStackData(node.right, 0f, 0f);
                     node = node.left;
                 }
 //                if (maxExt < node.leftPlane
@@ -251,7 +259,8 @@ public final class BIHNode implements Savable {
 
         ArrayList<BIHStackData> stack = vars.bihStack;
         stack.clear();
-        stack.add(new BIHStackData(this, 0, 0));
+        //stack.add(new BIHStackData(this, 0, 0));
+        vars.addStackData(this, 0f, 0f);
         stackloop:
         while (stack.size() > 0) {
 
@@ -264,7 +273,8 @@ public final class BIHNode implements Savable {
                 nearNode = node.left;
                 farNode = node.right;
 
-                stack.add(new BIHStackData(farNode, 0, 0));
+                //stack.add(new BIHStackData(farNode, 0, 0));
+                vars.addStackData(farNode, 0f, 0f);
                 node = nearNode;
             }
 
@@ -282,7 +292,8 @@ public final class BIHNode implements Savable {
                 if (t < tHit) {
                     tHit = t;
                     Vector3f contactPoint = new Vector3f(r.direction).multLocal(tHit).addLocal(r.origin);
-                    CollisionResult cr = new CollisionResult(contactPoint, tHit);
+                    //CollisionResult cr = new CollisionResult(contactPoint, tHit);
+                    CollisionResult cr = results.addReusedCollision(contactPoint.x, contactPoint.y, contactPoint.z, tHit);                    
                     cr.setTriangleIndex(tree.getTriangleIndex(i));
                     results.addCollision(cr);
                     cols++;
@@ -333,7 +344,8 @@ public final class BIHNode implements Savable {
                 v3 = vars.vect5;
         int cols = 0;
 
-        stack.add(new BIHStackData(this, sceneMin, sceneMax));
+        //stack.add(new BIHStackData(this, sceneMin, sceneMax));
+        vars.addStackData(this, sceneMin, sceneMax);
         stackloop:
         while (stack.size() > 0) {
 
@@ -399,7 +411,8 @@ public final class BIHNode implements Savable {
                     tMax = min(tMax, tNearSplit);
                     node = nearNode;
                 } else {
-                    stack.add(new BIHStackData(farNode, max(tMin, tFarSplit), tMax));
+                    //stack.add(new BIHStackData(farNode, max(tMin, tFarSplit), tMax));
+                    vars.addStackData(farNode, max(tMin, tFarSplit), tMax);
                     tMax = min(tMax, tNearSplit);
                     node = nearNode;
                 }

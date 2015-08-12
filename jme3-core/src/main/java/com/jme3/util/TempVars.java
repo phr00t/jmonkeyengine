@@ -32,8 +32,8 @@
 package com.jme3.util;
 
 import com.jme3.bounding.BoundingBox;
-import com.jme3.bounding.BoundingVolume;
 import com.jme3.collision.CollisionResults;
+import com.jme3.collision.bih.BIHNode;
 import com.jme3.collision.bih.BIHNode.BIHStackData;
 import com.jme3.math.*;
 import com.jme3.scene.Spatial;
@@ -226,6 +226,18 @@ public class TempVars {
      */
     public final CollisionResults collisionResults = new CollisionResults();
     public final float[] bihSwapTmp = new float[9];
-    public final ArrayList<BIHStackData> bihStack = new ArrayList<BIHStackData>();
+    public final ArrayList<BIHStackData> bihStack = new ArrayList<>(), bihStackStored = new ArrayList<>();
     public final Ray ray = new Ray();
+    
+    public void addStackData(BIHNode node, float min, float max) {
+        if( bihStack.size() >= bihStackStored.size() ) {
+            BIHStackData newbih = new BIHStackData(node, min, max);
+            bihStack.add(newbih);
+            bihStackStored.add(newbih);
+        } else {
+            BIHStackData bih = bihStackStored.get(bihStack.size());
+            bih.set(node, min, max);
+            bihStack.add(bih);
+        }
+    }
 }

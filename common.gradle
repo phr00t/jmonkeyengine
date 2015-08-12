@@ -9,7 +9,7 @@ apply plugin: 'maven-publish'
 group = 'com.jme3'
 version = jmePomVersion
 
-sourceCompatibility = '1.6'
+sourceCompatibility = '1.8'
 //[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 [compileJava]*.options*.encoding = 'UTF-8'
 
