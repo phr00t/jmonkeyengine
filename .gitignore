@@ -1,6 +1,8 @@
 /.gradle/
 /.nb-gradle/private/
 /.nb-gradle/profiles/private/
+/.idea/
+/dist/
 /build/
 /netbeans/
 /sdk/jdks/local/
@@ -126,6 +128,7 @@
 *.so
 *.jnilib
 *.dylib
+*.iml
 /sdk/dist/
 !/jme3-bullet-native/libs/native/windows/x86_64/bulletjme.dll
 !/jme3-bullet-native/libs/native/windows/x86/bulletjme.dll
