@@ -286,6 +286,12 @@ public class FilterPostProcessor implements SceneProcessor, Savable {
                         mat.clearParam("NumSamples");
                     }
                 }
+                
+                boolean wantsBilinear = filter.isRequiresBilinear();
+                if (wantsBilinear) {
+                    tex.setMagFilter(Texture.MagFilter.Bilinear);
+                    tex.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
+                }
 
                 buff = outputBuffer;
                 if (i != lastFilterIndex) {
@@ -295,6 +301,11 @@ public class FilterPostProcessor implements SceneProcessor, Savable {
                 }
                 renderProcessing(r, buff, mat);
                 filter.postFilter(r, buff);
+                
+                if (wantsBilinear) {
+                    tex.setMagFilter(Texture.MagFilter.Nearest);
+                    tex.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
+                }
             }
         }
     }
