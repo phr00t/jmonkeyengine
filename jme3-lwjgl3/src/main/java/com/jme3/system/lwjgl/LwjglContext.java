@@ -231,7 +231,7 @@ public abstract class LwjglContext implements JmeContext {
             while (created.get() != createdVal) {
                 try {
                     createdLock.wait();
-                } catch (InterruptedException ignored) {
+                } catch (InterruptedException ex) {
                 }
             }
         }
