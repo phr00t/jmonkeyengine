@@ -230,6 +230,14 @@ public final class GLRenderer implements Renderer {
         caps.add(Caps.GLSL110);
         caps.add(Caps.GLSL100);
 
+        // Going to go ahead and assume we support up to GLSL150,
+        // since it is so old & at least Intel HD doesn't report it is supported
+        // but we know it is...
+        caps.add(Caps.GLSL120);
+        caps.add(Caps.GLSL130);
+        caps.add(Caps.GLSL140);
+        caps.add(Caps.GLSL150);        
+        
         // Fix issue in TestRenderToMemory when GL.GL_FRONT is the main
         // buffer being used.
         context.initialDrawBuf = getInteger(GL2.GL_DRAW_BUFFER);
