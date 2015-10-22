@@ -176,6 +176,16 @@ public class GlfwMouseInput implements MouseInput {
             glfwSetInputMode(context.getWindowHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
+    
+    public void hideActiveCursor() {
+        if (!context.isRenderable()) {
+            return;
+        }
+
+        if (cursorVisible) {
+            glfwSetInputMode(context.getWindowHandle(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);            
+        }
+    }
 
     public void setInputListener(RawInputListener listener) {
         this.listener = listener;
@@ -187,8 +197,8 @@ public class GlfwMouseInput implements MouseInput {
 
     public void setNativeCursor(final JmeCursor jmeCursor) {
         if (jmeCursor != null) {
-            final ByteBuffer byteBuffer = org.lwjgl.BufferUtils.createByteBuffer(jmeCursor.getImagesData().capacity());
-            byteBuffer.asIntBuffer().put(jmeCursor.getImagesData().array());
+            final ByteBuffer byteBuffer = org.lwjgl.BufferUtils.createByteBuffer(jmeCursor.getImagesData().capacity() * 4);
+            byteBuffer.asIntBuffer().put(jmeCursor.getImagesData());
             final long cursor = glfwCreateCursor(byteBuffer, jmeCursor.getXHotSpot(), jmeCursor.getYHotSpot());
             glfwSetCursor(context.getWindowHandle(), cursor);
         }
