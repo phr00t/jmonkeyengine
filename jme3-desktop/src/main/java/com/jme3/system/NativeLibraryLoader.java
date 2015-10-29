@@ -318,13 +318,13 @@ public final class NativeLibraryLoader {
         File extractFolderInHome = getJmeUserCacheFolder();
         
         if (!extractFolderInHome.exists()) {
-            extractFolderInHome.mkdir();
+            extractFolderInHome.mkdirs();
         }
         
         extractionFolder = new File(extractFolderInHome, "natives_" + Integer.toHexString(computeNativesHash()));
         
         if (!extractionFolder.exists()) {
-            extractionFolder.mkdir();
+            extractionFolder.mkdirs();
         }
         
         logger.log(Level.WARNING, "Working directory is not writable. "
