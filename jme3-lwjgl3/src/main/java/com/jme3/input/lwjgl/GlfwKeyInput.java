@@ -50,7 +50,7 @@ public class GlfwKeyInput implements KeyInput {
 
     private LwjglWindow context;
     private RawInputListener listener;
-    private boolean initialized;
+    private boolean initialized, shift_pressed;
     private GLFWKeyCallback keyCallback;
     private Queue<KeyInputEvent> keyInputEvents = new LinkedList<KeyInputEvent>();
 
@@ -66,6 +66,13 @@ public class GlfwKeyInput implements KeyInput {
         glfwSetKeyCallback(context.getWindowHandle(), keyCallback = new GLFWKeyCallback() {
             @Override
             public void invoke(long window, int key, int scancode, int action, int mods) {
+                if( key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT ) {
+                    shift_pressed = (action == GLFW_PRESS);
+                } else if( key >= 'A' && key <= 'Z' && !shift_pressed ) {
+                    key += 32; // make lowercase
+                } else if( key >= 'a' && key <= 'z' && shift_pressed ) {
+                    key -= 32; // make uppercase
+                }
                 final KeyInputEvent evt = new KeyInputEvent(scancode, (char) key, GLFW_PRESS == action, GLFW_REPEAT == action);
                 evt.setTime(getInputTimeNanos());
                 keyInputEvents.add(evt);
