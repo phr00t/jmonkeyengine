@@ -136,17 +136,15 @@ public abstract class LwjglContext implements JmeContext {
     }
 
     protected void initContextFirstTime() {
-        final GLCapabilities capabilities = createCapabilities(true);
+        final GLCapabilities capabilities = createCapabilities(false);
 
         if (!capabilities.OpenGL20) {
             throw new RendererException("OpenGL 2.0 or higher is required for jMonkeyEngine");
         }
         
-        // make sure we use the latest supported opengl
-        if ( capabilities.OpenGL30 ) {
-            settings.setRenderer(AppSettings.LWJGL_OPENGL3);
-        } else {
-            settings.setRenderer(AppSettings.LWJGL_OPENGL2);            
+        // fallback to opengl2 if we want to use opengl3, but it isn't available
+        if (!capabilities.OpenGL30 && settings.getRenderer().equals(AppSettings.LWJGL_OPENGL3) ) {
+            settings.setRenderer(AppSettings.LWJGL_OPENGL2);
         }
 
         GL gl = new LwjglGL();
