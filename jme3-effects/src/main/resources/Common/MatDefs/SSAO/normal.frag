@@ -1,3 +1,6 @@
+#define FRAGMENT_SHADER
+#import "Common/ShaderLib/GLSLCompat.glsllib"
+
 varying vec3 normal;
 varying vec2 texCoord;
 
