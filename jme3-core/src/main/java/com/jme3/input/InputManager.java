@@ -398,7 +398,7 @@ public class InputManager implements RawInputListener {
             invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_Y, evt.getDY() < 0), val, false);
         }
         if (evt.getDeltaWheel() != 0) {
-            float val = Math.abs(evt.getDeltaWheel()) / 100f;
+            float val = Math.abs(evt.getDeltaWheel());
             invokeAnalogsAndActions(MouseAxisTrigger.mouseAxisHash(MouseInput.AXIS_WHEEL, evt.getDeltaWheel() < 0), val, false);
         }
     }
