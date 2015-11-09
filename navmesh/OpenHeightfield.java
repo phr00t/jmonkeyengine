@@ -220,7 +220,7 @@ public final class OpenHeightfield
      */
     //private final Hashtable<Integer, OpenHeightSpan> mSpans =
     //    new Hashtable<Integer, OpenHeightSpan>();
-    private final TIntObjectHashMap<OpenHeightSpan> mSpans = new TIntObjectHashMap<>();
+    public final TIntObjectHashMap<OpenHeightSpan> mSpans = new TIntObjectHashMap<>();
     
     /**
      * Constructor

@@ -311,6 +311,7 @@ public final class OpenHeightfieldBuilder
                 {
                     // There is one or more spans at this grid location.
                     // Add the first span in the chain to the spans hash.
+                    if( result.mSpans.size() > 32000 ) return null; // too many, something must be broken...
                     result.addData(widthIndex, depthIndex, baseSpan);
                 }
             }
