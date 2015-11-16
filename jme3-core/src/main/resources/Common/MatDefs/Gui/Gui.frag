@@ -1,3 +1,4 @@
+#define FRAGMENT_SHADER
 #import "Common/ShaderLib/GLSLCompat.glsllib"
 
 #ifdef TEXTURE
