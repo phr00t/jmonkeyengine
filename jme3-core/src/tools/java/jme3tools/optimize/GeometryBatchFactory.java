@@ -303,15 +303,20 @@ public class GeometryBatchFactory {
     }
 
     public static List<Geometry> makeBatches(Collection<Geometry> geometries) {
-        return makeBatches(geometries, false);
+        return makeBatches(geometries, false, false);
     }
 
+    public static List<Geometry> makeBatches(Collection<Geometry> geometries, boolean useLods) {
+        return makeBatches(geometries, useLods, false);
+    }
+    
     /**
      * Batches a collection of Geometries so that all with the same material get combined.
      * @param geometries The Geometries to combine
+     * @param makeStatic resulting meshes static for additional efficiency
      * @return A List of newly created Geometries, each with a  distinct material
      */
-    public static List<Geometry> makeBatches(Collection<Geometry> geometries, boolean useLods) {
+    public static List<Geometry> makeBatches(Collection<Geometry> geometries, boolean useLods, boolean makeStatic) {
         ArrayList<Geometry> retVal = new ArrayList<Geometry>();
         HashMap<Material, List<Geometry>> matToGeom = new HashMap<Material, List<Geometry>>();
 
@@ -343,6 +348,7 @@ public class GeometryBatchFactory {
                 makeLods(geomsForMat, mesh);
             }
             mesh.updateCounts();
+            if( makeStatic ) mesh.setStatic();
            
             Geometry out = new Geometry("batch[" + (batchNum++) + "]", mesh);
             out.setMaterial(mat);
@@ -384,6 +390,19 @@ public class GeometryBatchFactory {
      * @return The newly created optimized geometries attached to a node
      */
     public static Node optimize(Node scene, boolean useLods) {
+        return optimize(scene, useLods, false);
+    }
+
+    /**
+     * Optimizes a scene by combining Geometry with the same material.
+     * All Geometries found in the scene are detached from their parent and
+     * a new Node containing the optimized Geometries is attached.
+     * @param scene The scene to optimize
+     * @param useLods true if you want the resulting geometry to keep lod information
+     * @param makeStatic set the resulting meshes static for additional efficiency
+     * @return The newly created optimized geometries attached to a node
+     */
+    public static Node optimize(Node scene, boolean useLods, boolean makeStatic) {
         ArrayList<Geometry> geoms = new ArrayList<Geometry>();
 
         gatherGeoms(scene, geoms);
@@ -403,7 +422,7 @@ public class GeometryBatchFactory {
 
         return scene;
     }
-
+    
     public static void printMesh(Mesh mesh) {
         for (int bufType = 0; bufType < Type.values().length; bufType++) {
             VertexBuffer outBuf = mesh.getBuffer(Type.values()[bufType]);
