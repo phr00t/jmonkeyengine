@@ -43,7 +43,6 @@ import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext;
 import com.jme3.system.JmeSystem;
 import com.jme3.system.NanoTimer;
-import org.lwjgl.Sys;
 import org.lwjgl.glfw.*;
 
 import java.awt.*;
@@ -52,8 +51,10 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.lwjgl.Version;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFWErrorCallback.createPrint;
 import static org.lwjgl.opengl.GL11.GL_FALSE;
 import static org.lwjgl.opengl.GL11.GL_TRUE;
 import static org.lwjgl.system.MemoryUtil.NULL;
@@ -123,14 +124,8 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
      *
      * @param settings the settings to apply when creating the context.
      */
-    protected void createContext(final AppSettings settings) {
-        glfwSetErrorCallback(errorCallback = new GLFWErrorCallback() {
-            @Override
-            public void invoke(int error, long description) {
-                final String message = Callbacks.errorCallbackDescriptionString(description);
-                listener.handleError(message, new Exception(message));
-            }
-        });
+    protected void createContext(final AppSettings settings) {        
+        glfwSetErrorCallback(errorCallback = createPrint(System.err));
 
         if (glfwInit() != GL_TRUE) {
             throw new IllegalStateException("Unable to initialize GLFW");
@@ -146,10 +141,10 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
             monitor = glfwGetPrimaryMonitor();
         }
 
-        final ByteBuffer videoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        final GLFWVidMode videoMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
         if (settings.getWidth() <= 0 || settings.getHeight() <= 0) {
-            settings.setResolution(GLFWvidmode.width(videoMode), GLFWvidmode.height(videoMode));
+            settings.setResolution(videoMode.width(), videoMode.height());
         }
 
         window = glfwCreateWindow(settings.getWidth(), settings.getHeight(), settings.getTitle(), monitor, NULL);
@@ -198,7 +193,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
 
         // Center the window
         if (!settings.isFullscreen() && Type.Display.equals(type)) {
-            glfwSetWindowPos(window, (GLFWvidmode.width(videoMode) - settings.getWidth()) / 2, (GLFWvidmode.height(videoMode) - settings.getHeight()) / 2);
+            glfwSetWindowPos(window, (videoMode.width() - settings.getWidth()) / 2, (videoMode.height() - settings.getHeight()) / 2);
         }
 
         // Make the OpenGL context current
@@ -403,7 +398,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         }
 
         loadNatives();
-        LOGGER.log(Level.FINE, "Using LWJGL {0}", Sys.getVersion());
+        LOGGER.log(Level.FINE, "Using LWJGL {0}", Integer.toString(Version.VERSION_MAJOR));
 
         if (!initInThread()) {
             LOGGER.log(Level.SEVERE, "Display initialization failed. Cannot continue.");

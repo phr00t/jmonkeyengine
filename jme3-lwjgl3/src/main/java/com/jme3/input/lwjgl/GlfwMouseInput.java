@@ -48,6 +48,7 @@ import java.util.Queue;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.GLFW.*;
+import org.lwjgl.glfw.GLFWImage;
 
 /**
  * Captures mouse input using GLFW callbacks. It then temporarily stores these in event queues which are processed in the
@@ -207,7 +208,8 @@ public class GlfwMouseInput implements MouseInput {
         if (jmeCursor != null) {
             final ByteBuffer byteBuffer = org.lwjgl.BufferUtils.createByteBuffer(jmeCursor.getImagesData().capacity() * 4);
             byteBuffer.asIntBuffer().put(jmeCursor.getImagesData());
-            final long cursor = glfwCreateCursor(byteBuffer, jmeCursor.getXHotSpot(), jmeCursor.getYHotSpot());
+            GLFWImage curImage = new GLFWImage(byteBuffer);
+            final long cursor = glfwCreateCursor(curImage, jmeCursor.getXHotSpot(), jmeCursor.getYHotSpot());
             glfwSetCursor(context.getWindowHandle(), cursor);
         }
     }

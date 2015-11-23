@@ -43,7 +43,6 @@ import com.jme3.renderer.lwjgl.LwjglGLFboEXT;
 import com.jme3.renderer.lwjgl.LwjglGLFboGL3;
 import com.jme3.renderer.opengl.*;
 import com.jme3.system.*;
-import org.lwjgl.Sys;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.ARBDebugOutput;
 import org.lwjgl.opengl.ARBFramebufferObject;
@@ -53,6 +52,7 @@ import org.lwjgl.opengl.GLCapabilities;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.lwjgl.Version;
 
 import static org.lwjgl.opengl.GL.createCapabilities;
 import static org.lwjgl.opengl.GL11.GL_TRUE;
@@ -86,7 +86,7 @@ public abstract class LwjglContext implements JmeContext {
     protected void printContextInitInfo() {
         logger.log(Level.INFO, "LWJGL {0} context running on thread {1}\n" +
                         " * Graphics Adapter: GLFW {2}",
-                new Object[]{Sys.getVersion(), Thread.currentThread().getName(), GLFW.glfwGetVersionString()});
+                new Object[]{Integer.toString(Version.VERSION_MAJOR), Thread.currentThread().getName(), GLFW.glfwGetVersionString()});
     }
 
     protected int determineMaxSamples() {
