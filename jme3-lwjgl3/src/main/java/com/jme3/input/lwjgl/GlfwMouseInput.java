@@ -177,6 +177,14 @@ public class GlfwMouseInput implements MouseInput {
         }
     }
     
+    public void setCursorPosition(int x, int y) {
+        if (!context.isRenderable()) {
+            return;
+        }
+        
+        glfwSetCursorPos(context.getWindowHandle(), x, y);	
+    }
+    
     public void hideActiveCursor() {
         if (!context.isRenderable()) {
             return;
