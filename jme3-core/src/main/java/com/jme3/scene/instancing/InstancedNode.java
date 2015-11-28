@@ -148,7 +148,7 @@ public class InstancedNode extends GeometryGroupNode {
     
     private InstanceTypeKey lookUp = new InstanceTypeKey();
     
-    private HashMap<InstanceTypeKey, InstancedGeometry> instancesMap = 
+    public HashMap<InstanceTypeKey, InstancedGeometry> instancesMap = 
             new HashMap<InstanceTypeKey, InstancedGeometry>();
     
     public InstancedNode() {
@@ -163,13 +163,13 @@ public class InstancedNode extends GeometryGroupNode {
         addControl(control);
     }
     
-    private void renderFromControl() {
+    public void renderFromControl() {
         for (InstancedGeometry ig : instancesMap.values()) {
             ig.updateInstances();
         }
     }
 
-    private InstancedGeometry lookUpByGeometry(Geometry geom) {
+    public InstancedGeometry lookUpByGeometry(Geometry geom) {
         lookUp.mesh = geom.getMesh();
         lookUp.material = geom.getMaterial();
         lookUp.lodLevel = geom.getLodLevel();
