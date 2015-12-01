@@ -31,6 +31,7 @@
  */
 package com.jme3.scene.instancing;
 
+import com.jme3.bounding.BoundingVolume;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -58,7 +59,8 @@ public class InstancedGeometry extends Geometry {
     
     private VertexBuffer[] globalInstanceData;
     private VertexBuffer transformInstanceData;
-    private Geometry[] geometries = new Geometry[1];
+    private Geometry[] geometries;
+    private Geometry forceBoundFrom;
     
     private int firstUnusedIndex = 0;
 
@@ -84,6 +86,45 @@ public class InstancedGeometry extends Geometry {
         setIgnoreTransform(true);
         setBatchHint(BatchHint.Never);
         setMaxNumInstances(1);
+    }
+    
+    public InstancedGeometry(String name, boolean ignoreTransform, int maxInstances) {
+        super(name);
+        setIgnoreTransform(ignoreTransform);
+        setBatchHint(BatchHint.Never);
+        setMaxNumInstances(maxInstances);        
+    }
+    
+    public void forceBoundFrom(Geometry geo) {
+        forceBoundFrom = geo;
+    }
+            
+    @Override
+    public BoundingVolume getWorldBound() {
+        if( forceBoundFrom != null ) {
+            return forceBoundFrom.getWorldBound();
+        }
+        return super.getWorldBound();
+    }
+    
+    @Override
+    protected void updateWorldBound() {
+        if( forceBoundFrom != null ) return;
+        super.updateWorldBound();
+    }    
+    
+    @Override
+    public void updateModelBound() {
+        if( forceBoundFrom != null ) return;
+        super.updateModelBound();
+    }
+    
+    @Override
+    public BoundingVolume getModelBound() {
+        if( forceBoundFrom != null ) {
+            return forceBoundFrom.getModelBound();
+        }
+        return super.getModelBound();
     }
     
     /**
