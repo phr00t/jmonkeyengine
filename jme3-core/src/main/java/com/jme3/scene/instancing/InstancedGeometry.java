@@ -40,7 +40,11 @@ import com.jme3.export.Savable;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Matrix4f;
 import com.jme3.math.Quaternion;
+import com.jme3.math.Transform;
+import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.scene.Geometry;
+import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.VertexBuffer;
 import com.jme3.scene.VertexBuffer.Format;
@@ -60,7 +64,7 @@ public class InstancedGeometry extends Geometry {
     private VertexBuffer[] globalInstanceData;
     private VertexBuffer transformInstanceData;
     private Geometry[] geometries;
-    private Geometry forceBoundFrom;
+    private Geometry forceLinkedGeometry;
     
     private int firstUnusedIndex = 0;
 
@@ -95,34 +99,128 @@ public class InstancedGeometry extends Geometry {
         setMaxNumInstances(maxInstances);        
     }
     
-    public void forceBoundFrom(Geometry geo) {
-        forceBoundFrom = geo;
+    public void forceLinkedGeometry(Geometry geo) {
+        forceLinkedGeometry = geo;
     }
             
     @Override
+    public Vector3f getLocalTranslation() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getLocalTranslation();
+        }
+        return super.getLocalTranslation();        
+    }
+    
+    @Override
+    public Vector3f getLocalScale() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getLocalScale();
+        }
+        return super.getLocalScale();        
+    }
+    
+    @Override
+    public Quaternion getLocalRotation() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getLocalRotation();
+        }
+        return super.getLocalRotation();        
+    }
+    
+    @Override
+    public Quaternion getWorldRotation() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getWorldRotation();
+        }
+        return super.getWorldRotation();        
+    }
+    
+    @Override
+    public Vector3f getWorldTranslation() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getWorldTranslation();
+        }
+        return super.getWorldTranslation();        
+    }
+
+    @Override
+    public Vector3f getWorldScale() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getWorldScale();
+        }
+        return super.getWorldScale();        
+    }
+
+    @Override
+    public void updateLogicalState(float tpf) {
+        if( forceLinkedGeometry != null ) return;
+        super.updateLogicalState(tpf);        
+    }
+    
+    @Override
+    public void updateGeometricState() {
+        if( forceLinkedGeometry != null ) {
+            return;
+        }
+        super.updateGeometricState();        
+    }
+    
+    @Override
+    public Transform getLocalTransform() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getLocalTransform();
+        }
+        return super.getLocalTransform();                
+    }
+    
+    @Override
+    public Bucket getQueueBucket() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getQueueBucket();
+        }
+        return super.getQueueBucket();                        
+    }
+    
+    @Override
+    public Transform getWorldTransform() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getWorldTransform();
+        }
+        return super.getWorldTransform();                                
+    }
+
+    @Override
+    public Matrix4f getWorldMatrix() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getWorldMatrix();
+        }
+        return super.getWorldMatrix();        
+    }        
+    
+    @Override
     public BoundingVolume getWorldBound() {
-        if( forceBoundFrom != null ) {
-            return forceBoundFrom.getWorldBound();
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getWorldBound();
         }
         return super.getWorldBound();
     }
     
     @Override
     protected void updateWorldBound() {
-        if( forceBoundFrom != null ) return;
+        if( forceLinkedGeometry != null ) return;
         super.updateWorldBound();
     }    
     
     @Override
     public void updateModelBound() {
-        if( forceBoundFrom != null ) return;
+        if( forceLinkedGeometry != null ) return;
         super.updateModelBound();
     }
     
     @Override
     public BoundingVolume getModelBound() {
-        if( forceBoundFrom != null ) {
-            return forceBoundFrom.getModelBound();
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getModelBound();
         }
         return super.getModelBound();
     }
@@ -263,27 +361,6 @@ public class InstancedGeometry extends Geometry {
         }
         if (geometries[idx2] != null) {
             InstancedNode.setGeometryStartIndex2(geometries[idx2], idx2);
-        }
-    }
-    
-    private void sanitize(boolean insideEntriesNonNull) {
-        if (firstUnusedIndex >= geometries.length) {
-            throw new AssertionError();
-        }
-        for (int i = 0; i < geometries.length; i++) {
-            if (i < firstUnusedIndex) {
-                if (geometries[i] == null) {
-                    if (insideEntriesNonNull) {
-                        throw new AssertionError();
-                    }  
-                } else if (InstancedNode.getGeometryStartIndex2(geometries[i]) != i) {
-                    throw new AssertionError();
-                }
-            } else {
-                if (geometries[i] != null) {
-                    throw new AssertionError();
-                }
-            }
         }
     }
     

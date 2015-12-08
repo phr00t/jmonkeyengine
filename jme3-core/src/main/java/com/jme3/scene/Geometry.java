@@ -441,7 +441,7 @@ public class Geometry extends Spatial {
 
         assert (refreshFlags & (RF_BOUND | RF_TRANSFORM)) == 0;
 
-        if (mesh != null) {
+        if (mesh != null && worldBound != null) {
             // NOTE: BIHTree in mesh already checks collision with the
             // mesh's bound
             int prevSize = results.size();

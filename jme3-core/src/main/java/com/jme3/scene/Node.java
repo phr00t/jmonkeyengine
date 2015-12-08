@@ -36,14 +36,13 @@ import com.jme3.collision.Collidable;
 import com.jme3.collision.CollisionResults;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
-import com.jme3.export.Savable;
 import com.jme3.material.Material;
 import com.jme3.util.SafeArrayList;
-import com.jme3.util.TempVars;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -89,6 +88,14 @@ public class Node extends Spatial {
     public Node() {
         this(null);
     }
+    
+    /**
+     * If the following is initialized somewhere, all added geometry will be added
+     * to it. This is useful for automating processing of all geometry added to
+     * a scene, no matter how deep it is added. In particular, VR instancing can
+     * be done by automatically instancing added geometry by using this list.
+     */
+    public static Stack<Geometry> trackedAddedGeometry, trackedRemovedGeometry;
 
     /**
      * Constructor instantiates a new <code>Node</code> with a default empty
@@ -121,7 +128,9 @@ public class Node extends Spatial {
     @Override
     protected void setTransformRefresh(){
         super.setTransformRefresh();
-        for (Spatial child : children.getArray()){
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             if ((child.refreshFlags & RF_TRANSFORM) != 0)
                 continue;
 
@@ -132,7 +141,9 @@ public class Node extends Spatial {
     @Override
     protected void setLightListRefresh(){
         super.setLightListRefresh();
-        for (Spatial child : children.getArray()){
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             if ((child.refreshFlags & RF_LIGHTLIST) != 0)
                 continue;
 
@@ -147,9 +158,11 @@ public class Node extends Spatial {
         // for a node, the world bound is a combination of all it's children
         // bounds
         BoundingVolume resultBound = null;
-        for (Spatial child : children.getArray()) {
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             // child bound is assumed to be updated
-            assert (child.refreshFlags & RF_BOUND) == 0;
+            //assert (child.refreshFlags & RF_BOUND) == 0;
             if (resultBound != null) {
                 // merge current world bound with child world bound
                 resultBound.mergeLocal(child.getWorldBound());
@@ -176,7 +189,9 @@ public class Node extends Spatial {
     }
 
     private void addUpdateChildren( SafeArrayList<Spatial> results ) {
-        for( Spatial child : children.getArray() ) {
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             if( child.requiresUpdates() ) {
                 results.add(child);
             }
@@ -257,7 +272,9 @@ public class Node extends Spatial {
             // a round-trip later on.
             // NOTE 9/19/09
             // Although it does save a round trip,
-            for (Spatial child : children.getArray()) {
+            for(int i=0;i<children.size();i++){
+                Spatial child = children.get(i);
+                if( child == null ) continue;
                 child.updateGeometricState();
             }
         }            
@@ -318,7 +335,7 @@ public class Node extends Spatial {
      * @throws IllegalArgumentException if child is null.
      */
     public int attachChild(Spatial child) {
-        return attachChildAt(child, children.size());
+        return attachChildAt(child, -1);
     }
     
     /**
@@ -343,7 +360,10 @@ public class Node extends Spatial {
                 child.getParent().detachChild(child);
             }
             child.setParent(this);
-            children.add(index, child);
+            
+            if( index == -1 ) {
+                children.add(child);
+            } else children.add(index, child);
             
             // XXX: Not entirely correct? Forces bound update up the
             // tree stemming from the attached child. Also forces
@@ -353,6 +373,11 @@ public class Node extends Spatial {
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE,"Child ({0}) attached to this node ({1})",
                         new Object[]{child.getName(), getName()});
+            }
+            
+            if( child instanceof Geometry &&
+                trackedAddedGeometry != null ) {
+                trackedAddedGeometry.push((Geometry)child);
             }
             
             invalidateUpdateList();
@@ -433,6 +458,11 @@ public class Node extends Spatial {
             // lights are also inherited from parent
             child.setLightListRefresh();
             
+            if( child instanceof Geometry &&
+                trackedRemovedGeometry != null ) {
+                trackedRemovedGeometry.push((Geometry)child);
+            }
+                        
             invalidateUpdateList();
         }
         return child;
@@ -506,7 +536,9 @@ public class Node extends Spatial {
         if (name == null) 
             return null;
 
-        for (Spatial child : children.getArray()) {
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             if (name.equals(child.getName())) {
                 return child;
             } else if(child instanceof Node) {
@@ -531,7 +563,9 @@ public class Node extends Spatial {
         if (children.contains(spat))
             return true;
 
-        for (Spatial child : children.getArray()) {
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             if (child instanceof Node && ((Node) child).hasChild(spat))
                 return true;
         }
@@ -559,7 +593,9 @@ public class Node extends Spatial {
     @Override
     public void setLodLevel(int lod){
         super.setLodLevel(lod);
-        for (Spatial child : children.getArray()) {
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             child.setLodLevel(lod);
         }
     }
@@ -608,7 +644,9 @@ public class Node extends Spatial {
           if (bv.collideWith(other) == 0) return 0;
         }
         */
-        for (Spatial child : children.getArray()){
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             total += child.collideWith(other, results);
         }
         return total;
@@ -730,7 +768,9 @@ public class Node extends Spatial {
     @Override
     public void setModelBound(BoundingVolume modelBound) {
         if(children != null) {
-            for (Spatial child : children.getArray()) {
+            for(int i=0;i<children.size();i++){
+                Spatial child = children.get(i);
+                if( child == null ) continue;
                 child.setModelBound(modelBound != null ? modelBound.clone(null) : null);
             }
         }
@@ -739,7 +779,9 @@ public class Node extends Spatial {
     @Override
     public void updateModelBound() {
         if(children != null) {
-            for (Spatial child : children.getArray()) {
+            for(int i=0;i<children.size();i++){
+                Spatial child = children.get(i);
+                if( child == null ) continue;
                 child.updateModelBound();
             }
         }
@@ -747,7 +789,9 @@ public class Node extends Spatial {
     
     @Override
     public void depthFirstTraversal(SceneGraphVisitor visitor) {
-        for (Spatial child : children.getArray()) {
+        for(int i=0;i<children.size();i++){
+            Spatial child = children.get(i);
+            if( child == null ) continue;
             child.depthFirstTraversal(visitor);
         }
         visitor.visit(this);
