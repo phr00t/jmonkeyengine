@@ -52,9 +52,9 @@ public final class Matrix3f implements Savable, Cloneable, java.io.Serializable 
     static final long serialVersionUID = 1;
 
     private static final Logger logger = Logger.getLogger(Matrix3f.class.getName());
-    protected float m00, m01, m02;
-    protected float m10, m11, m12;
-    protected float m20, m21, m22;
+    public float m00, m01, m02;
+    public float m10, m11, m12;
+    public float m20, m21, m22;
     public static final Matrix3f ZERO = new Matrix3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
     public static final Matrix3f IDENTITY = new Matrix3f();
 

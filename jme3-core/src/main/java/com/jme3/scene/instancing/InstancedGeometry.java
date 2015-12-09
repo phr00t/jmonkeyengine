@@ -32,6 +32,8 @@
 package com.jme3.scene.instancing;
 
 import com.jme3.bounding.BoundingVolume;
+import com.jme3.collision.Collidable;
+import com.jme3.collision.CollisionResults;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -103,6 +105,14 @@ public class InstancedGeometry extends Geometry {
         forceLinkedGeometry = geo;
     }
             
+    @Override
+    public int collideWith(Collidable other, CollisionResults results) {
+        if( forceLinkedGeometry != null ) {
+            return 0; // do collisions with forcedlinkedgeometry instead
+        }
+        return super.collideWith(other, results);
+    }
+
     @Override
     public Vector3f getLocalTranslation() {
         if( forceLinkedGeometry != null ) {
@@ -273,6 +283,14 @@ public class InstancedGeometry extends Geometry {
         return transformInstanceData;
     }
     
+    private void quickFromRotation(Quaternion quat, Matrix3f m1) {
+        float w = (float)Math.sqrt(1f + m1.m00 + m1.m11 + m1.m22) / 2f;
+	float w4 = (4f * w);
+	quat.set((m1.m21 - m1.m12) / w4,
+                 (m1.m02 - m1.m20) / w4,
+                 (m1.m10 - m1.m01) / w4, w);
+    }
+    
     private void updateInstance(Matrix4f worldMatrix, float[] store, 
                                 int offset, Matrix3f tempMat3, 
                                 Quaternion tempQuat) {
@@ -282,7 +300,8 @@ public class InstancedGeometry extends Geometry {
         // NOTE: No need to take the transpose in order to encode
         // into quaternion, the multiplication in the shader is vec * quat
         // apparently...
-        tempQuat.fromRotationMatrix(tempMat3);
+        //tempQuat.fromRotationMatrix(tempMat3);
+        quickFromRotation(tempQuat, tempMat3);
 
         // Column-major encoding. The "W" field in each of the encoded
         // vectors represents the quaternion.

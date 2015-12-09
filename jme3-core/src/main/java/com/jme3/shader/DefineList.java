@@ -196,10 +196,15 @@ public final class DefineList implements Savable, Cloneable {
          // Defines were changed, update define list
         clear();
         for(int i=0;i<params.size();i++) {
-            MatParam param = (MatParam)params.getValue(i);
-            String defineName = def.getShaderParamDefine(param.getName());
-            if (defineName != null) {
-                set(defineName, param.getVarType(), param.getValue());
+            try {
+                MatParam param = (MatParam)params.getValue(i);
+                String defineName = def.getShaderParamDefine(param.getName());
+                if (defineName != null) {
+                    set(defineName, param.getVarType(), param.getValue());
+                }
+            } catch(Exception e) {
+                // threading problem... not good, but lets not crash
+                // next frame should hopefully repair parameters
             }
         }
         return true;
@@ -210,7 +215,14 @@ public final class DefineList implements Savable, Cloneable {
         int size = 0;
 
         for(int i = 0; i < params.size() ; i++ ) {
-            MatParam param = (MatParam)params.getValue(i);
+            MatParam param;
+            try {
+                param = (MatParam)params.getValue(i);
+            } catch(Exception e) {
+                // threading problem may cause the above to fail
+                // not good, but let's not crash the whole app
+                return false;
+            }
             String key = def.getShaderParamDefine(param.getName());
             if (key != null) {
                 Object val = param.getValue();
