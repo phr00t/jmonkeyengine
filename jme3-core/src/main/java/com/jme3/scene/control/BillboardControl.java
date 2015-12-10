@@ -51,6 +51,8 @@ public class BillboardControl extends AbstractControl {
     private Matrix3f orient;
     private Vector3f look;
     private Vector3f left;
+    private Vector3f up;
+    private Quaternion rot, rot2;
     private Alignment alignment;
 
     /**
@@ -83,6 +85,9 @@ public class BillboardControl extends AbstractControl {
         orient = new Matrix3f();
         look = new Vector3f();
         left = new Vector3f();
+        up = new Vector3f();
+        rot = new Quaternion();
+        rot2 = new Quaternion();
         alignment = Alignment.Screen;
     }
 
@@ -187,17 +192,19 @@ public class BillboardControl extends AbstractControl {
      */
     private void rotateScreenAligned(Camera camera) {
         // coopt diff for our in direction:
-        look.set(camera.getDirection()).negateLocal();
+        camera.getDirection(look).negateLocal();
         // coopt loc for our left direction:
-        left.set(camera.getLeft()).negateLocal();
-        orient.fromAxes(left, camera.getUp(), look);
+        camera.getLeft(left).negateLocal();
+        orient.fromAxes(left, camera.getUp(up), look);
         Node parent = spatial.getParent();
-        Quaternion rot=new Quaternion().fromRotationMatrix(orient);
+        rot2.fromRotationMatrix(orient);
         if ( parent != null ) {
-            rot =  parent.getWorldRotation().inverse().multLocal(rot);
+            rot.set(parent.getWorldRotation()).inverseLocal().multLocal(rot2);
             rot.normalizeLocal();
+            spatial.setLocalRotation(rot);
+        } else {
+            spatial.setLocalRotation(rot2);
         }
-        spatial.setLocalRotation(rot);
         fixRefreshFlags();
     }
 

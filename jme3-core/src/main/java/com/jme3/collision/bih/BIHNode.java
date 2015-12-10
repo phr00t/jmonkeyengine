@@ -291,9 +291,8 @@ public final class BIHNode implements Savable {
                 float t = r.intersects(v1, v2, v3);
                 if (t < tHit) {
                     tHit = t;
-                    Vector3f contactPoint = new Vector3f(r.direction).multLocal(tHit).addLocal(r.origin);
-                    //CollisionResult cr = new CollisionResult(contactPoint, tHit);
-                    CollisionResult cr = results.addReusedCollision(contactPoint.x, contactPoint.y, contactPoint.z, tHit);                    
+                    vars.vect4.set(r.direction).multLocal(tHit).addLocal(r.origin);
+                    CollisionResult cr = results.addReusedCollision(vars.vect4.x, vars.vect4.y, vars.vect4.z, tHit);                    
                     cr.setTriangleIndex(tree.getTriangleIndex(i));
                     results.addCollision(cr);
                     cols++;
@@ -441,14 +440,17 @@ public final class BIHNode implements Savable {
                         t = t_world;
                     }
 
-                    Vector3f contactPoint = new Vector3f(d).multLocal(t).addLocal(o);
+                    Vector3f contactPoint = vars.vect4.set(d).multLocal(t).addLocal(o);
                     float worldSpaceDist = o.distance(contactPoint);
 
                     // don't add the collision if it is longer than the ray length
                     if( worldSpaceDist <= r.limit ) {
                         CollisionResult cr = results.addReusedCollision(contactPoint.x, contactPoint.y, contactPoint.z, worldSpaceDist);
-                        Vector3f contactNormal = Triangle.computeTriangleNormal(v1, v2, v3, null);
-                        cr.setContactNormal(contactNormal);
+                        if( cr.getContactNormal() == null ) {
+                            cr.setContactNormal(Triangle.computeTriangleNormal(v1, v2, v3, null));
+                        } else {
+                            Triangle.computeTriangleNormal(v1, v2, v3, cr.getContactNormal()); 
+                        }
                         cr.setTriangleIndex(tree.getTriangleIndex(i));
                         cols++;
                     }
