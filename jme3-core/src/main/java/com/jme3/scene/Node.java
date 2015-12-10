@@ -95,7 +95,7 @@ public class Node extends Spatial {
      * a scene, no matter how deep it is added. In particular, VR instancing can
      * be done by automatically instancing added geometry by using this list.
      */
-    public static Stack<Geometry> trackedAddedGeometry, trackedRemovedGeometry;
+    public static Stack<Geometry> trackedRemovedGeometry;
 
     /**
      * Constructor instantiates a new <code>Node</code> with a default empty
@@ -373,11 +373,6 @@ public class Node extends Spatial {
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE,"Child ({0}) attached to this node ({1})",
                         new Object[]{child.getName(), getName()});
-            }
-            
-            if( child instanceof Geometry &&
-                trackedAddedGeometry != null ) {
-                trackedAddedGeometry.push((Geometry)child);
             }
             
             invalidateUpdateList();

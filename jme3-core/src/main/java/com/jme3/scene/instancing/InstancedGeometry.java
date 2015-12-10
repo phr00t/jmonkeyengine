@@ -105,6 +105,10 @@ public class InstancedGeometry extends Geometry {
         forceLinkedGeometry = geo;
     }
             
+    public Geometry getLinkedGeometry() {
+        return forceLinkedGeometry;
+    }
+    
     @Override
     public int collideWith(Collidable other, CollisionResults results) {
         if( forceLinkedGeometry != null ) {

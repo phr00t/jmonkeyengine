@@ -49,6 +49,7 @@ import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.*;
+import com.jme3.scene.Spatial.BatchHint;
 import com.jme3.shader.Uniform;
 import com.jme3.shader.UniformBinding;
 import com.jme3.shader.UniformBindingManager;
@@ -58,6 +59,7 @@ import com.jme3.util.SafeArrayList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -488,6 +490,8 @@ public class RenderManager {
         uniformBindingManager.updateUniformBindings(params);
     }
 
+    public static Stack<Geometry> trackedRenderedGeometry;
+    
     /**
      * Renders the given geometry.
      * <p>
@@ -520,6 +524,14 @@ public class RenderManager {
      * @see Material#render(com.jme3.scene.Geometry, com.jme3.renderer.RenderManager) 
      */
     public void renderGeometry(Geometry g) {
+        
+        // if we are doing something weird, like VR instancing, take care of that first
+        if( trackedRenderedGeometry != null &&
+            g.getBatchHint() != BatchHint.Never ) {            
+            trackedRenderedGeometry.add(g);
+            return; // don't render it until it was duplicated for eyes
+        }
+
         if (g.isIgnoreTransform()) {
             setWorldMatrix(Matrix4f.IDENTITY);
         } else {
@@ -535,7 +547,6 @@ public class RenderManager {
             lightList = filteredLightList;
         }
         
-
         //if forcedTechnique we try to force it for render,
         //if it does not exists in the mat def, we check for forcedMaterial and render the geom if not null
         //else the geom is not rendered
@@ -686,7 +697,7 @@ public class RenderManager {
                     vp.getCamera().setPlaneState(camState);
                     renderSubScene(s, vp);
                 } catch(Exception e) {
-                    logger.log(Level.WARNING, "renderSubScene crash contained: {0}", e.toString());
+                    logger.log(Level.SEVERE, "renderSubScene crash contained: {0}", e.toString());
                 }
             }
         } else if (scene instanceof Geometry) {

@@ -34,14 +34,19 @@ package com.jme3.shader;
 import com.jme3.export.*;
 import com.jme3.material.MatParam;
 import com.jme3.material.TechniqueDef;
+import com.jme3.scene.Node;
 import static com.jme3.shader.VarType.Int;
 import com.jme3.util.ListMap;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class DefineList implements Savable, Cloneable {
+
+    private static final Logger logger = Logger.getLogger(Node.class.getName());
 
     private static final String ONE = "1";
     
@@ -205,6 +210,7 @@ public final class DefineList implements Savable, Cloneable {
             } catch(Exception e) {
                 // threading problem... not good, but lets not crash
                 // next frame should hopefully repair parameters
+                logger.log(Level.SEVERE, "Material param update exception: {0}", e.toString());
             }
         }
         return true;
@@ -221,6 +227,7 @@ public final class DefineList implements Savable, Cloneable {
             } catch(Exception e) {
                 // threading problem may cause the above to fail
                 // not good, but let's not crash the whole app
+                logger.log(Level.SEVERE, "Material param equal check exception: {0}", e.toString());
                 return false;
             }
             String key = def.getShaderParamDefine(param.getName());
