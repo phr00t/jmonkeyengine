@@ -50,6 +50,7 @@ import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.*;
 import com.jme3.scene.Spatial.BatchHint;
+import com.jme3.scene.instancing.InstancedGeometry;
 import com.jme3.shader.Uniform;
 import com.jme3.shader.UniformBinding;
 import com.jme3.shader.UniformBindingManager;
@@ -75,6 +76,8 @@ import java.util.logging.Logger;
  */
 public class RenderManager {
 
+    public static Stack<Geometry> trackedRenderedGeometry;
+    
     private static final Logger logger = Logger.getLogger(RenderManager.class.getName());
     private Renderer renderer;
     private UniformBindingManager uniformBindingManager = new UniformBindingManager();
@@ -490,8 +493,6 @@ public class RenderManager {
         uniformBindingManager.updateUniformBindings(params);
     }
 
-    public static Stack<Geometry> trackedRenderedGeometry;
-    
     /**
      * Renders the given geometry.
      * <p>
@@ -525,13 +526,6 @@ public class RenderManager {
      */
     public void renderGeometry(Geometry g) {
         
-        // if we are doing something weird, like VR instancing, take care of that first
-        if( trackedRenderedGeometry != null &&
-            g.getBatchHint() != BatchHint.Never ) {            
-            trackedRenderedGeometry.add(g);
-            return; // don't render it until it was duplicated for eyes
-        }
-
         if (g.isIgnoreTransform()) {
             setWorldMatrix(Matrix4f.IDENTITY);
         } else {
@@ -677,6 +671,28 @@ public class RenderManager {
     // recursively renders the scene
     private void renderSubScene(Spatial scene, ViewPort vp) {
 
+        Bucket qb = null;
+        
+        // if we are doing something weird, like VR instancing, take care of that first
+        if( trackedRenderedGeometry != null &&
+            scene instanceof Geometry ) {
+            qb = scene.getQueueBucket();       
+            if( qb != Bucket.Gui ) {            
+                Geometry g = (Geometry)scene;
+                if( g.getBatchHint() == BatchHint.Never ) {
+                    InstancedGeometry ig = g.getUserData("instanced");
+                    if( ig != null && ig.getParent() != g.getParent() ) {
+                        g.getParent().attachChild(ig);
+                        trackedRenderedGeometry.add(g); // make sure to add it to igToRender
+                        return; // don't render this geometry, ig will be added later
+                    }
+                } else {
+                    trackedRenderedGeometry.add(g);
+                    return; // g isn't instanced yet, wait for addition later after processing
+                }
+            }
+        }        
+        
         // check culling first.
         if (!scene.checkCulling(vp.getCamera())) {
             return;
@@ -707,7 +723,7 @@ public class RenderManager {
                 throw new IllegalStateException("No material is set for Geometry: " + gm.getName());
             }
 
-            vp.getQueue().addToQueue(gm, scene.getQueueBucket());
+            vp.getQueue().addToQueue(gm, qb == null ? scene.getQueueBucket() : qb );
         }
     }
 

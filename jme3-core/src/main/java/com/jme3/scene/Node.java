@@ -95,7 +95,7 @@ public class Node extends Spatial {
      * a scene, no matter how deep it is added. In particular, VR instancing can
      * be done by automatically instancing added geometry by using this list.
      */
-    public static Stack<Geometry> trackedRemovedGeometry;
+    public static Stack<Spatial> trackedRemovedSpatials;
 
     /**
      * Constructor instantiates a new <code>Node</code> with a default empty
@@ -453,9 +453,8 @@ public class Node extends Spatial {
             // lights are also inherited from parent
             child.setLightListRefresh();
             
-            if( child instanceof Geometry &&
-                trackedRemovedGeometry != null ) {
-                trackedRemovedGeometry.push((Geometry)child);
+            if( trackedRemovedSpatials != null ) {
+                trackedRemovedSpatials.push(child);
             }
                         
             invalidateUpdateList();
