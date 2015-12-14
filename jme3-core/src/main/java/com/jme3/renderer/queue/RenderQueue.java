@@ -44,7 +44,7 @@ import com.jme3.scene.Spatial;
  * @author Kirill Vainer
  */
 public class RenderQueue {
-
+    
     private GeometryList opaqueList;
     private GeometryList guiList;
     private GeometryList transparentList;

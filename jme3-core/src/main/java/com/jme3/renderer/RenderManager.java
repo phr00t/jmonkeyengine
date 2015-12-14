@@ -34,6 +34,7 @@ package com.jme3.renderer;
 import com.jme3.light.DefaultLightFilter;
 import com.jme3.light.LightFilter;
 import com.jme3.light.LightList;
+import com.jme3.material.MatParam;
 import com.jme3.material.Material;
 import com.jme3.material.MaterialDef;
 import com.jme3.material.RenderState;
@@ -76,7 +77,7 @@ import java.util.logging.Logger;
  */
 public class RenderManager {
 
-    public static Stack<Geometry> trackedRenderedGeometry;
+    public static Matrix4f _VRInstancing_RightCamProjection = null;
     
     private static final Logger logger = Logger.getLogger(RenderManager.class.getName());
     private Renderer renderer;
@@ -668,27 +669,63 @@ public class RenderManager {
         renderSubScene(scene, vp);
     }
     
+    private InstancedGeometry addToInstancedGeometry(Geometry geom) {
+        Material material = geom.getMaterial();
+        MatParam param = material.getMaterialDef().getMaterialParam("UseInstancing");
+        MatParam param2 = material.getMaterialDef().getMaterialParam("RightEyeViewProjectionMatrix");
+        if (param == null || param2 == null) {
+            System.out.println("VR instance failed on geo '" + geom.getName() + "', material '" + material.getMaterialDef().getAssetName() + "' Check material params!");
+            return null;
+        }
+        geom.getMaterial().setMatrix4("RightEyeViewProjectionMatrix", _VRInstancing_RightCamProjection);
+        material.setBoolean("UseInstancing", true);
+        InstancedGeometry ig = new InstancedGeometry(geom.getName() + "-instance", false, 2);
+        ig.forceLinkedGeometry(geom);
+        ig.setMaterial(geom.getMaterial());
+        ig.setMesh(geom.getMesh());
+        ig.getMesh().setStatic();
+        ig.setUserData(UserData.JME_PHYSICSIGNORE, true);
+        geom.setCullHint(Spatial.CullHint.Always);
+        geom.setBatchHint(BatchHint.Never);
+        ig.setBatchHint(BatchHint.Never);
+        ig.setCullHint(Spatial.CullHint.Dynamic);
+        geom.setUserData("instanced", ig);
+        ig.addInstance(geom);
+        ig.addInstance(geom);
+        Node myparent = geom.getParent();
+        if( myparent != null ) myparent.attachChild(ig);
+        return ig;
+    }    
+    
     // recursively renders the scene
     private void renderSubScene(Spatial scene, ViewPort vp) {
 
         Bucket qb = null;
         
         // if we are doing something weird, like VR instancing, take care of that first
-        if( trackedRenderedGeometry != null &&
-            scene instanceof Geometry ) {
-            qb = scene.getQueueBucket();       
-            if( qb != Bucket.Gui ) {            
-                Geometry g = (Geometry)scene;
-                if( g.getBatchHint() == BatchHint.Never ) {
-                    InstancedGeometry ig = g.getUserData("instanced");
-                    if( ig != null && ig.getParent() != g.getParent() ) {
-                        g.getParent().attachChild(ig);
-                        trackedRenderedGeometry.add(g); // make sure to add it to igToRender
-                        return; // don't render this geometry, ig will be added later
+        if( _VRInstancing_RightCamProjection != null ) {
+            if( scene instanceof InstancedGeometry ) {
+                // this instance geometry is trying to be rendered,
+                // make sure the linked geometry is still attached
+                Geometry g = ((InstancedGeometry)scene).getLinkedGeometry();
+                if( g != null && g.getParent() == null ) {
+                    scene.removeFromParent();
+                    return;
+                }
+            } else if( scene instanceof Geometry ) {
+                qb = scene.getQueueBucket();       
+                if( qb != Bucket.Gui ) {            
+                    InstancedGeometry ig;
+                    Geometry g = (Geometry)scene;
+                    if( g.getBatchHint() == BatchHint.Never ) {
+                        ig = g.getUserData("instanced");
+                    } else {
+                        ig = addToInstancedGeometry(g);
                     }
-                } else {
-                    trackedRenderedGeometry.add(g);
-                    return; // g isn't instanced yet, wait for addition later after processing
+                    if( ig != null ) {
+                        if( ig.getParent() != g.getParent() ) g.getParent().attachChild(ig);
+                        scene = ig;
+                    } else g.setBatchHint(BatchHint.Never);
                 }
             }
         }        
@@ -696,6 +733,14 @@ public class RenderManager {
         // check culling first.
         if (!scene.checkCulling(vp.getCamera())) {
             return;
+        }
+        
+        if( _VRInstancing_RightCamProjection != null &&
+            scene instanceof InstancedGeometry ) {
+            // this instanced geometry is visible, update its position
+            Geometry g = ((InstancedGeometry)scene).getLinkedGeometry();
+            if( g != null ) g.runControlRender(this, vp);
+            ((InstancedGeometry)scene).updateInstances();
         }
 
         scene.runControlRender(this, vp);
