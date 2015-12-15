@@ -31,6 +31,7 @@
  */
 package com.jme3.renderer;
 
+import com.jme3.font.BitmapText;
 import com.jme3.light.DefaultLightFilter;
 import com.jme3.light.LightFilter;
 import com.jme3.light.LightList;
@@ -677,18 +678,17 @@ public class RenderManager {
             System.out.println("VR instance failed on geo '" + geom.getName() + "', material '" + material.getMaterialDef().getAssetName() + "' Check material params!");
             return null;
         }
-        geom.getMaterial().setMatrix4("RightEyeViewProjectionMatrix", _VRInstancing_RightCamProjection);
+        material.setMatrix4("RightEyeViewProjectionMatrix", _VRInstancing_RightCamProjection);
         material.setBoolean("UseInstancing", true);
         InstancedGeometry ig = new InstancedGeometry(geom.getName() + "-instance", false, 2);
         ig.forceLinkedGeometry(geom);
-        ig.setMaterial(geom.getMaterial());
+        ig.setMaterial(material);
         ig.setMesh(geom.getMesh());
         ig.getMesh().setStatic();
         ig.setUserData(UserData.JME_PHYSICSIGNORE, true);
-        geom.setCullHint(Spatial.CullHint.Always);
         geom.setBatchHint(BatchHint.Never);
         ig.setBatchHint(BatchHint.Never);
-        ig.setCullHint(Spatial.CullHint.Dynamic);
+        ig.setCullHint(Spatial.CullHint.Inherit);
         geom.setUserData("instanced", ig);
         ig.addInstance(geom);
         ig.addInstance(geom);
@@ -699,51 +699,63 @@ public class RenderManager {
     
     // recursively renders the scene
     private void renderSubScene(Spatial scene, ViewPort vp) {
-
-        Bucket qb = null;
-        
-        // if we are doing something weird, like VR instancing, take care of that first
-        if( _VRInstancing_RightCamProjection != null ) {
-            if( scene instanceof InstancedGeometry ) {
-                // this instance geometry is trying to be rendered,
-                // make sure the linked geometry is still attached
-                Geometry g = ((InstancedGeometry)scene).getLinkedGeometry();
-                if( g != null && g.getParent() == null ) {
-                    scene.removeFromParent();
-                    return;
-                }
-            } else if( scene instanceof Geometry ) {
-                qb = scene.getQueueBucket();       
-                if( qb != Bucket.Gui ) {            
-                    InstancedGeometry ig;
-                    Geometry g = (Geometry)scene;
-                    if( g.getBatchHint() == BatchHint.Never ) {
-                        ig = g.getUserData("instanced");
-                    } else {
-                        ig = addToInstancedGeometry(g);
-                    }
-                    if( ig != null ) {
-                        if( ig.getParent() != g.getParent() ) g.getParent().attachChild(ig);
-                        scene = ig;
-                    } else g.setBatchHint(BatchHint.Never);
-                }
-            }
-        }        
         
         // check culling first.
         if (!scene.checkCulling(vp.getCamera())) {
             return;
         }
         
-        if( _VRInstancing_RightCamProjection != null &&
-            scene instanceof InstancedGeometry ) {
-            // this instanced geometry is visible, update its position
-            Geometry g = ((InstancedGeometry)scene).getLinkedGeometry();
-            if( g != null ) g.runControlRender(this, vp);
-            ((InstancedGeometry)scene).updateInstances();
+        Bucket qb = null;
+        
+        // if we are doing something weird, like VR instancing, take care of that first
+        boolean needsInstanceUpdate = false;
+        if( _VRInstancing_RightCamProjection != null ) {
+            if( scene instanceof InstancedGeometry ) {
+                // this instance geometry is trying to be rendered,
+                // make sure the linked geometry is still attached
+                Geometry g = ((InstancedGeometry)scene).getLinkedGeometry();
+                if( g != null ) {
+                    if( g.getParent() == null ) {
+                        scene.removeFromParent();
+                        return;
+                    }
+                }
+                needsInstanceUpdate = true;
+            } else if( scene instanceof Geometry ||
+                       scene instanceof BitmapText ) {
+                qb = scene.getQueueBucket();       
+                if( qb != Bucket.Gui ) {            
+                    InstancedGeometry ig;
+                    if( scene.getBatchHint() == BatchHint.Never ) {
+                        ig = scene.getUserData("instanced");
+                        // do we already have an instance?
+                        if( ig != null ) {
+                            // fix parent if needed
+                            if( ig.getParent() != scene.getParent() ) scene.getParent().attachChild(ig);
+                            return; // don't render this geometry, wait for instanced geometry
+                        }
+                    } else {
+                        if( scene instanceof BitmapText ) {
+                            BitmapText bt = (BitmapText)scene;
+                            ig = addToInstancedGeometry(bt.getPages()[0]);
+                            ig.forceRenderControlNode(bt);
+                        } else {
+                            ig = addToInstancedGeometry((Geometry)scene);
+                        }
+                        if( ig != null ) {
+                            scene = ig;
+                            needsInstanceUpdate = true;
+                        }
+                    }
+                    // flag it was looked at
+                    scene.setBatchHint(BatchHint.Never);
+                }
+            }
         }
-
-        scene.runControlRender(this, vp);
+        
+        scene.runControlRender(this, vp);        
+        if( needsInstanceUpdate ) ((InstancedGeometry)scene).updateInstances();
+        
         if (scene instanceof Node) {
             // Recurse for all children
             Node n = (Node) scene;

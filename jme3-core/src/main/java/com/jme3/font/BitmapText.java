@@ -85,6 +85,10 @@ public class BitmapText extends Node {
         return clone;
     }
 
+    public BitmapTextPage[] getPages() {
+        return textPages;
+    }
+    
     public BitmapFont getFont() {
         return font;
     }

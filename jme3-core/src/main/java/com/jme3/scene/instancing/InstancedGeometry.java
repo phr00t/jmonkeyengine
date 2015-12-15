@@ -39,11 +39,14 @@ import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
+import com.jme3.font.BitmapText;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Matrix4f;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Transform;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
@@ -67,6 +70,7 @@ public class InstancedGeometry extends Geometry {
     private VertexBuffer transformInstanceData;
     private Geometry[] geometries;
     private Geometry forceLinkedGeometry;
+    private Node forceRenderControlNode;
     
     private int firstUnusedIndex = 0;
 
@@ -104,7 +108,15 @@ public class InstancedGeometry extends Geometry {
     public void forceLinkedGeometry(Geometry geo) {
         forceLinkedGeometry = geo;
     }
+    
+    public void forceRenderControlNode(Node node) {
+        forceRenderControlNode = node;
+    }
             
+    public Node getRenderControlNode() {
+        return forceRenderControlNode;
+    }
+    
     public Geometry getLinkedGeometry() {
         return forceLinkedGeometry;
     }
@@ -237,6 +249,15 @@ public class InstancedGeometry extends Geometry {
             return forceLinkedGeometry.getModelBound();
         }
         return super.getModelBound();
+    }
+    
+    @Override
+    public void runControlRender(RenderManager rm, ViewPort vp) {
+        if( forceRenderControlNode != null ) {
+            forceRenderControlNode.runControlRender(rm, vp);
+        } else if( forceLinkedGeometry != null ) {
+            forceLinkedGeometry.runControlRender(rm, vp);
+        } else super.runControlRender(rm, vp);
     }
     
     /**
