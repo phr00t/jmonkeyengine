@@ -59,7 +59,7 @@ public class BulletAppState implements AppState, PhysicsTickListener {
     protected Vector3f worldMin = new Vector3f(-10000f, -10000f, -10000f);
     protected Vector3f worldMax = new Vector3f(10000f, 10000f, 10000f);
     protected float speed = 1;
-    protected boolean active = true;
+    protected boolean active = true, waitOnPhysics = true;
     protected boolean debugEnabled = false;
     protected BulletDebugAppState debugAppState;
     protected float tpf;
@@ -95,6 +95,16 @@ public class BulletAppState implements AppState, PhysicsTickListener {
      */
     public BulletAppState(Vector3f worldMin, Vector3f worldMax) {
         this(worldMin, worldMax, BroadphaseType.AXIS_SWEEP_3);
+    }
+    
+    /**
+     * If we are doing PARALELL physics calculation, should we wait
+     * for it to finish post-render?
+     * 
+     * @param waitOnPhysics defaults to true
+     */
+    public void setWaitOnPhysics(boolean waitOnPhysics) {
+        this.waitOnPhysics = waitOnPhysics;
     }
 
     public BulletAppState(Vector3f worldMin, Vector3f worldMax, BroadphaseType broadphaseType) {
@@ -250,7 +260,7 @@ public class BulletAppState implements AppState, PhysicsTickListener {
     }
 
     public void postRender() {
-        if (physicsFuture != null) {
+        if (waitOnPhysics && physicsFuture != null) {
             try {
                 physicsFuture.get();
                 physicsFuture = null;

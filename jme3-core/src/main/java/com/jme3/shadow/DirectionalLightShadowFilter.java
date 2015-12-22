@@ -37,6 +37,7 @@ import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.light.DirectionalLight;
+import com.jme3.material.Material;
 import java.io.IOException;
 
 /**
@@ -71,6 +72,10 @@ public class DirectionalLightShadowFilter extends AbstractShadowFilter<Direction
         super(assetManager, shadowMapSize, new DirectionalLightShadowRenderer(assetManager, shadowMapSize, nbSplits));
     }
 
+    public DirectionalLightShadowFilter(AssetManager assetManager, int shadowMapSize, int nbSplits, String useMatDef) {
+        super(assetManager, shadowMapSize, new DirectionalLightShadowRenderer(assetManager, shadowMapSize, nbSplits), useMatDef);
+    }
+    
     /**
      * return the light used to cast shadows
      *

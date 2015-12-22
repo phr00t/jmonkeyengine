@@ -76,6 +76,14 @@ public abstract class AbstractShadowFilter<T extends AbstractShadowRenderer> ext
         this.shadowRenderer.setPostShadowMaterial(material);
     }
 
+    @SuppressWarnings("all")
+    protected AbstractShadowFilter(AssetManager manager, int shadowMapSize, T shadowRenderer, String useMatDef) {
+        super("Post Shadow");
+        material = new Material(manager, useMatDef);       
+        this.shadowRenderer = shadowRenderer;
+        this.shadowRenderer.setPostShadowMaterial(material);
+    }
+    
     @Override
     protected Material getMaterial() {
         return material;

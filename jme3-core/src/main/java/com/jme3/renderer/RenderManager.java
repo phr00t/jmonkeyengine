@@ -527,7 +527,6 @@ public class RenderManager {
      * @see Material#render(com.jme3.scene.Geometry, com.jme3.renderer.RenderManager) 
      */
     public void renderGeometry(Geometry g) {
-        
         if (g.isIgnoreTransform()) {
             setWorldMatrix(Matrix4f.IDENTITY);
         } else {
@@ -543,6 +542,9 @@ public class RenderManager {
             lightList = filteredLightList;
         }
         
+        // Report the number of lights we're about to render to the statistics.
+        renderer.getStatistics().onLights(lightList.size());
+
         //if forcedTechnique we try to force it for render,
         //if it does not exists in the mat def, we check for forcedMaterial and render the geom if not null
         //else the geom is not rendered
@@ -649,10 +651,8 @@ public class RenderManager {
      * <p>
      * In addition to enqueuing the visible geometries, this method
      * also scenes which cast or receive shadows, by putting them into the
-     * RenderQueue's 
-     * {@link RenderQueue#addToShadowQueue(com.jme3.scene.Geometry, com.jme3.renderer.queue.RenderQueue.ShadowMode) 
-     * shadow queue}. Each Spatial which has its 
-     * {@link Spatial#setShadowMode(com.jme3.renderer.queue.RenderQueue.ShadowMode) shadow mode}
+     * RenderQueue's {@link RenderQueue#renderShadowQueue(GeometryList, RenderManager, Camera, boolean) shadow queue}.
+     * Each Spatial which has its {@link Spatial#setShadowMode(com.jme3.renderer.queue.RenderQueue.ShadowMode) shadow mode}
      * set to not off, will be put into the appropriate shadow queue, note that
      * this process does not check for frustum culling on any 
      * {@link ShadowMode#Cast shadow casters}, as they don't have to be
@@ -875,7 +875,7 @@ public class RenderManager {
      * @param singlePassLightBatchSize the number of lights.
      */
     public void setSinglePassLightBatchSize(int singlePassLightBatchSize) {
-        this.singlePassLightBatchSize = singlePassLightBatchSize;
+        this.singlePassLightBatchSize = singlePassLightBatchSize < 1 ? 1 : singlePassLightBatchSize;
     }
     
     
@@ -1086,8 +1086,8 @@ public class RenderManager {
      * which were not rendered because of a missing shadow renderer.</li>
      * </ul>
      * 
-     * @param vp
-     * @param tpf 
+     * @param vp View port to render
+     * @param tpf Time per frame value
      */
     public void renderViewPort(ViewPort vp, float tpf) {
         if (!vp.isEnabled()) {
