@@ -672,14 +672,12 @@ public class RenderManager {
     
     private InstancedGeometry addToInstancedGeometry(Geometry geom) {
         Material material = geom.getMaterial();
-        MatParam param = material.getMaterialDef().getMaterialParam("UseInstancing");
-        MatParam param2 = material.getMaterialDef().getMaterialParam("RightEyeViewProjectionMatrix");
-        if (param == null || param2 == null) {
+        MatParam param = material.getMaterialDef().getMaterialParam("RightEyeViewProjectionMatrix");
+        if (param == null) {
             System.out.println("VR instance failed on geo '" + geom.getName() + "', material '" + material.getMaterialDef().getAssetName() + "' Check material params!");
             return null;
         }
         material.setMatrix4("RightEyeViewProjectionMatrix", _VRInstancing_RightCamProjection);
-        material.setBoolean("UseInstancing", true);
         InstancedGeometry ig = new InstancedGeometry(geom.getName() + "-instance", false, 2);
         ig.forceLinkedGeometry(geom);
         ig.setMaterial(material);
