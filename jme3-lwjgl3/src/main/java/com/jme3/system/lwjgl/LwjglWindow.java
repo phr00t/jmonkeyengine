@@ -58,6 +58,7 @@ import static org.lwjgl.glfw.GLFWErrorCallback.createPrint;
 import static org.lwjgl.opengl.GL11.GL_FALSE;
 import static org.lwjgl.opengl.GL11.GL_TRUE;
 import static org.lwjgl.system.MemoryUtil.NULL;
+import org.lwjgl.system.Platform;
 
 /**
  * A wrapper class over the GLFW framework in LWJGL 3.
@@ -126,7 +127,10 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
      */
     protected void createContext(final AppSettings settings) {        
         glfwSetErrorCallback(errorCallback = createPrint(System.err));
-
+        
+        // make sure AWT is initialized before GLFW
+        if( Platform.get() == Platform.MACOSX ) java.awt.Toolkit.getDefaultToolkit();
+        
         if (glfwInit() != GL_TRUE) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
