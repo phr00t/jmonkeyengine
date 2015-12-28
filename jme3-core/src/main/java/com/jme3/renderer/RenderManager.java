@@ -79,7 +79,6 @@ import java.util.logging.Logger;
 public class RenderManager {
 
     public static Matrix4f _VRInstancing_RightCamProjection = null;
-    
     private static final Logger logger = Logger.getLogger(RenderManager.class.getName());
     private Renderer renderer;
     private UniformBindingManager uniformBindingManager = new UniformBindingManager();
@@ -541,9 +540,6 @@ public class RenderManager {
             lightFilter.filterLights(g, filteredLightList);
             lightList = filteredLightList;
         }
-        
-        // Report the number of lights we're about to render to the statistics.
-        renderer.getStatistics().onLights(lightList.size());
 
         //if forcedTechnique we try to force it for render,
         //if it does not exists in the mat def, we check for forcedMaterial and render the geom if not null
@@ -566,7 +562,7 @@ public class RenderManager {
                 forcedRenderState = tmpRs;
 
                 //Reverted this part from revision 6197
-                //If forcedTechnique does not exists, and frocedMaterial is not set, the geom MUST NOT be rendered
+                //If forcedTechnique does not exists, and forcedMaterial is not set, the geom MUST NOT be rendered
             } else if (forcedMaterial != null) {
                 // use forced material
                 forcedMaterial.render(g, lightList, this);
@@ -693,16 +689,16 @@ public class RenderManager {
         Node myparent = geom.getParent();
         if( myparent != null ) myparent.attachChild(ig);
         return ig;
-    }    
+    }
     
     // recursively renders the scene
     private void renderSubScene(Spatial scene, ViewPort vp) {
-        
+
         // check culling first.
         if (!scene.checkCulling(vp.getCamera())) {
             return;
         }
-        
+
         Bucket qb = null;
         
         // if we are doing something weird, like VR instancing, take care of that first
@@ -750,10 +746,8 @@ public class RenderManager {
                 }
             }
         }
-        
-        scene.runControlRender(this, vp);        
+        scene.runControlRender(this, vp);
         if( needsInstanceUpdate ) ((InstancedGeometry)scene).updateInstances();
-        
         if (scene instanceof Node) {
             // Recurse for all children
             Node n = (Node) scene;
@@ -761,11 +755,10 @@ public class RenderManager {
             // Saving cam state for culling
             int camState = vp.getCamera().getPlaneState();
             for (int i = 0; i < children.size(); i++) {
-                // put this in a try block, incase children have changed (avoids a crash)
                 try {
                     Spatial s = children.get(i);
-                    // Restoring cam state before proceeding children recusively
-                    vp.getCamera().setPlaneState(camState);
+                // Restoring cam state before proceeding children recusively
+                vp.getCamera().setPlaneState(camState);
                     renderSubScene(s, vp);
                 } catch(Exception e) {
                     logger.log(Level.SEVERE, "renderSubScene crash contained: {0}", e.toString());
@@ -873,6 +866,7 @@ public class RenderManager {
      * @param singlePassLightBatchSize the number of lights.
      */
     public void setSinglePassLightBatchSize(int singlePassLightBatchSize) {
+        // Ensure the batch size is no less than 1
         this.singlePassLightBatchSize = singlePassLightBatchSize < 1 ? 1 : singlePassLightBatchSize;
     }
     
@@ -1079,7 +1073,7 @@ public class RenderManager {
      * (see {@link #renderTranslucentQueue(com.jme3.renderer.ViewPort) })</li>
      * <li>If any objects remained in the render queue, they are removed
      * from the queue. This is generally objects added to the 
-     * {@link RenderQueue#renderShadowQueue(com.jme3.renderer.queue.RenderQueue.ShadowMode, com.jme3.renderer.RenderManager, com.jme3.renderer.Camera, boolean) 
+     * {@link RenderQueue#renderShadowQueue(GeometryList, RenderManager, Camera, boolean) shadow queue}
      * shadow queue}
      * which were not rendered because of a missing shadow renderer.</li>
      * </ul>
