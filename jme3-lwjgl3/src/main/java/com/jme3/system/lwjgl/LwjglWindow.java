@@ -269,11 +269,12 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
             return;
         }
 
-        new Thread(this, THREAD_NAME).start();
+        Thread.currentThread().setName(THREAD_NAME);
+        run();
 
-        if (waitFor) {
+        /*if (waitFor) {
             waitFor(true);
-        }
+        }*/
     }
 
     /**
