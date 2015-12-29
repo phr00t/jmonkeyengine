@@ -11,5 +11,5 @@ repositories {
 dependencies {
     compile project(':jme3-core')
     compile project(':jme3-desktop')
-    compile files('lib/lwjgl-3.0.0b-35.jar', 'lib/lwjgl-3.0.0b-35-natives.jar')
+    compile files('lib/lwjgl-3.0.0b-64.jar', 'lib/lwjgl-3.0.0b-64-natives.jar')
 }
