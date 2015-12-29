@@ -131,9 +131,6 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
                 listener.handleError(message, new Exception(message));
             }
         });
-       
-        // make sure AWT is initialized before GLFW
-        java.awt.Toolkit.getDefaultToolkit();
         
         if (glfwInit() != GL_TRUE) {
             throw new IllegalStateException("Unable to initialize GLFW");
