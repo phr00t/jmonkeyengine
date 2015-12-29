@@ -66,6 +66,7 @@ public class GlfwKeyInput implements KeyInput {
         glfwSetKeyCallback(context.getWindowHandle(), keyCallback = new GLFWKeyCallback() {
             @Override
             public void invoke(long window, int key, int scancode, int action, int mods) {
+                scancode = GlfwKeyMap.toJmeKeyCode(key);
                 if( key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT ) {
                     shift_pressed = (action == GLFW_PRESS);
                 } else if( key >= 'A' && key <= 'Z' && !shift_pressed ) {

@@ -53,6 +53,7 @@ import com.jme3.renderer.opengl.GLTiming;
 import com.jme3.renderer.opengl.GLTimingState;
 import com.jme3.renderer.opengl.GLTracer;
 import com.jme3.system.*;
+import java.io.File;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -87,10 +88,10 @@ public abstract class LwjglContext implements JmeContext {
     }
 
     protected void printContextInitInfo() {
-        logger.log(Level.INFO, "LWJGL {0} context running on thread {1}\n" +
-                               " * Graphics Adapter: {2}\n" +
-                               " * Driver Version: {3}\n" +
-                               " * Scaling Factor: {4}",
+        logger.log(Level.INFO, "LWJGL {0} context running on thread {1}\n"
+                + " * Graphics Adapter: {2}\n"
+                + " * Driver Version: {3}\n"
+                + " * Scaling Factor: {4}",
                                new Object[]{ Sys.getVersion(), Thread.currentThread().getName(), 
                                              Display.getAdapter(), Display.getVersion(),
                                              Display.getPixelScaleFactor() });
@@ -198,56 +199,53 @@ public abstract class LwjglContext implements JmeContext {
 
     protected void initContextFirstTime(){
         if (!GLContext.getCapabilities().OpenGL20) {
-            throw new RendererException("OpenGL 2.0 or higher is " + 
-                                        "required for jMonkeyEngine");
+            throw new RendererException("OpenGL 2.0 or higher is "
+                    + "required for jMonkeyEngine");
         }
         
-        // fix bad renderer settings instead of crashing
-        // an old renderer may have been selected & saved before, so pick a valid one now
         if( !(   settings.getRenderer().equals(AppSettings.LWJGL_OPENGL2)
               || settings.getRenderer().equals(AppSettings.LWJGL_OPENGL3)) ) {
             logger.log(Level.WARNING, "Repairing bad renderer in AppSettings: {0}", settings.getRenderer());
             settings.setRenderer(AppSettings.LWJGL_OPENGL2);
         }
-        
-        GL gl = new LwjglGL();
-        GLExt glext = new LwjglGLExt();
-        GLFbo glfbo;
-
-        if (GLContext.getCapabilities().OpenGL30) {
-            glfbo = new LwjglGLFboGL3();
-        } else {
-            glfbo = new LwjglGLFboEXT();
-        }
-
-        if (settings.getBoolean("GraphicsDebug")) {
-            gl    = new GLDebugDesktop(gl, glext, glfbo);
-            glext = (GLExt) gl;
-            glfbo = (GLFbo) gl;
-        }
-
-        if (settings.getBoolean("GraphicsTiming")) {
-            GLTimingState timingState = new GLTimingState();
-            gl    = (GL) GLTiming.createGLTiming(gl, timingState, GL.class, GL2.class, GL3.class, GL4.class);
-            glext = (GLExt) GLTiming.createGLTiming(glext, timingState, GLExt.class);
-            glfbo = (GLFbo) GLTiming.createGLTiming(glfbo, timingState, GLFbo.class);
-        }
-
-        if (settings.getBoolean("GraphicsTrace")) {
-            gl    = (GL) GLTracer.createDesktopGlTracer(gl, GL.class, GL2.class, GL3.class, GL4.class);
-            glext = (GLExt) GLTracer.createDesktopGlTracer(glext, GLExt.class);
-            glfbo = (GLFbo) GLTracer.createDesktopGlTracer(glfbo, GLFbo.class);
-        }
-
-        renderer = new GLRenderer(gl, glext, glfbo);
-        renderer.initialize();
+            GL gl = new LwjglGL();
+            GLExt glext = new LwjglGLExt();
+            GLFbo glfbo;
+            
+            if (GLContext.getCapabilities().OpenGL30) {
+                glfbo = new LwjglGLFboGL3();
+            } else {
+                glfbo = new LwjglGLFboEXT();
+            }
+            
+            if (settings.getBoolean("GraphicsDebug")) {
+                gl    = new GLDebugDesktop(gl, glext, glfbo);
+                glext = (GLExt) gl;
+                glfbo = (GLFbo) gl;
+            }
+            
+            if (settings.getBoolean("GraphicsTiming")) {
+                GLTimingState timingState = new GLTimingState();
+                gl    = (GL) GLTiming.createGLTiming(gl, timingState, GL.class, GL2.class, GL3.class, GL4.class);
+                glext = (GLExt) GLTiming.createGLTiming(glext, timingState, GLExt.class);
+                glfbo = (GLFbo) GLTiming.createGLTiming(glfbo, timingState, GLFbo.class);
+            }
+                  
+            if (settings.getBoolean("GraphicsTrace")) {
+                gl    = (GL) GLTracer.createDesktopGlTracer(gl, GL.class, GL2.class, GL3.class, GL4.class);
+                glext = (GLExt) GLTracer.createDesktopGlTracer(glext, GLExt.class);
+                glfbo = (GLFbo) GLTracer.createDesktopGlTracer(glfbo, GLFbo.class);
+            }
+            
+            renderer = new GLRenderer(gl, glext, glfbo);
+            renderer.initialize();
         
         if (GLContext.getCapabilities().GL_ARB_debug_output && settings.getBoolean("GraphicsDebug")) {
             ARBDebugOutput.glDebugMessageCallbackARB(new ARBDebugOutputCallback(new LwjglGLDebugOutputHandler()));
         }
         
-        renderer.setMainFrameBufferSrgb(settings.getGammaCorrection());
-        renderer.setLinearizeSrgbImages(settings.getGammaCorrection());
+        renderer.setMainFrameBufferSrgb(settings.isGammaCorrection());
+        renderer.setLinearizeSrgbImages(settings.isGammaCorrection());
 
         // Init input
         if (keyInput != null) {

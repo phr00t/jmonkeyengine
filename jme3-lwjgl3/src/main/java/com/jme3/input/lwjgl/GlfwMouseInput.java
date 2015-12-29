@@ -38,17 +38,22 @@ import com.jme3.input.RawInputListener;
 import com.jme3.input.event.MouseButtonEvent;
 import com.jme3.input.event.MouseMotionEvent;
 import com.jme3.system.lwjgl.LwjglWindow;
+import com.jme3.util.BufferUtils;
 import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWMouseButtonCallback;
 import org.lwjgl.glfw.GLFWScrollCallback;
 
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.system.MemoryUtil;
 
 /**
  * Captures mouse input using GLFW callbacks. It then temporarily stores these in event queues which are processed in the
@@ -75,14 +80,13 @@ public class GlfwMouseInput implements MouseInput {
     private Queue<MouseMotionEvent> mouseMotionEvents = new LinkedList<MouseMotionEvent>();
     private Queue<MouseButtonEvent> mouseButtonEvents = new LinkedList<MouseButtonEvent>();
 
-    public GlfwMouseInput(final LwjglWindow context) {
+    private Map<JmeCursor, Long> jmeToGlfwCursorMap = new HashMap<JmeCursor, Long>();
+
+    public GlfwMouseInput(LwjglWindow context) {
         this.context = context;
     }
 
-    public void initialize() {
-        glfwSetCursorPosCallback(context.getWindowHandle(), cursorPosCallback = new GLFWCursorPosCallback() {
-            @Override
-            public void invoke(long window, double xpos, double ypos) {
+    private void onCursorPos(long window, double xpos, double ypos) {
                 int xDelta;
                 int yDelta;
                 int x = (int) Math.round(xpos);
@@ -107,25 +111,39 @@ public class GlfwMouseInput implements MouseInput {
                     mouseMotionEvents.add(mouseMotionEvent);
                 }
             }
-        });
 
-        glfwSetScrollCallback(context.getWindowHandle(), scrollCallback = new GLFWScrollCallback() {
-            @Override
-            public void invoke(final long window, final double xOffset, final double yOffset) {
+    private void onWheelScroll(long window, double xOffset, double yOffset) {
                 mouseWheel += yOffset;
 
                 final MouseMotionEvent mouseMotionEvent = new MouseMotionEvent(mouseX, mouseY, 0, 0, mouseWheel, (int) Math.round(yOffset));
                 mouseMotionEvent.setTime(getInputTimeNanos());
                 mouseMotionEvents.add(mouseMotionEvent);
             }
+    private void onMouseButton(final long window, final int button, final int action, final int mods) {
+        final MouseButtonEvent mouseButtonEvent = new MouseButtonEvent(convertButton(button), action == GLFW_PRESS, mouseX, mouseY);
+        mouseButtonEvent.setTime(getInputTimeNanos());
+        mouseButtonEvents.add(mouseButtonEvent);
+    }
+
+    public void initialize() {
+        glfwSetCursorPosCallback(context.getWindowHandle(), cursorPosCallback = new GLFWCursorPosCallback() {
+            @Override
+            public void invoke(long window, double xpos, double ypos) {
+                onCursorPos(window, xpos, ypos);
+            }
+        });
+
+        glfwSetScrollCallback(context.getWindowHandle(), scrollCallback = new GLFWScrollCallback() {
+            @Override
+            public void invoke(final long window, final double xOffset, final double yOffset) {
+                onWheelScroll(window, xOffset, yOffset);
+            }
         });
 
         glfwSetMouseButtonCallback(context.getWindowHandle(), mouseButtonCallback = new GLFWMouseButtonCallback() {
             @Override
             public void invoke(final long window, final int button, final int action, final int mods) {
-                final MouseButtonEvent mouseButtonEvent = new MouseButtonEvent(convertButton(button), action == GLFW_PRESS, mouseX, mouseY);
-                mouseButtonEvent.setTime(getInputTimeNanos());
-                mouseButtonEvents.add(mouseButtonEvent);
+                onMouseButton(window, button, action, mods);
             }
         });
 
@@ -134,6 +152,24 @@ public class GlfwMouseInput implements MouseInput {
         initialized = true;
     }
 
+    public void setCursorPosition(int x, int y) {
+        if (!context.isRenderable()) {
+            return;
+        }
+        
+        glfwSetCursorPos(context.getWindowHandle(), x, y);	
+    }
+    
+    public void hideActiveCursor() {
+        if (!context.isRenderable()) {
+            return;
+        }
+
+        if (cursorVisible) {
+            glfwSetInputMode(context.getWindowHandle(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);            
+        }
+    }
+    
     public boolean isInitialized() {
         return initialized;
     }
@@ -160,6 +196,9 @@ public class GlfwMouseInput implements MouseInput {
         cursorPosCallback.release();
         scrollCallback.release();
         mouseButtonCallback.release();
+        for (long glfwCursor : jmeToGlfwCursorMap.values()) {
+            glfwDestroyCursor(glfwCursor);
+        }
 
         logger.fine("Mouse destroyed.");
     }
@@ -177,24 +216,6 @@ public class GlfwMouseInput implements MouseInput {
             glfwSetInputMode(context.getWindowHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
-    
-    public void setCursorPosition(int x, int y) {
-        if (!context.isRenderable()) {
-            return;
-        }
-        
-        glfwSetCursorPos(context.getWindowHandle(), x, y);	
-    }
-    
-    public void hideActiveCursor() {
-        if (!context.isRenderable()) {
-            return;
-        }
-
-        if (cursorVisible) {
-            glfwSetInputMode(context.getWindowHandle(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);            
-        }
-    }
 
     public void setInputListener(RawInputListener listener) {
         this.listener = listener;
@@ -204,32 +225,52 @@ public class GlfwMouseInput implements MouseInput {
         return (long) (glfwGetTime() * 1000000000);
     }
 
-    public void setNativeCursor(final JmeCursor jmeCursor) {
+    private long createGlfwCursor(JmeCursor jmeCursor) {
+        GLFWImage glfwImage = new GLFWImage(BufferUtils.createByteBuffer(GLFWImage.SIZEOF));
+
+        // TODO: currently animated cursors are not supported
+        IntBuffer imageData = jmeCursor.getImagesData();
+        ByteBuffer buf = BufferUtils.createByteBuffer(imageData.capacity());
+        buf.asIntBuffer().put(imageData);
+
+        glfwImage.set(jmeCursor.getWidth(), jmeCursor.getHeight(), buf);
+
+        return glfwCreateCursor(glfwImage, jmeCursor.getXHotSpot(), jmeCursor.getYHotSpot());
+    }
+
+    public void setNativeCursor(JmeCursor jmeCursor) {
         if (jmeCursor != null) {
-            final ByteBuffer byteBuffer = org.lwjgl.BufferUtils.createByteBuffer(jmeCursor.getImagesData().capacity() * 4);
-            byteBuffer.asIntBuffer().put(jmeCursor.getImagesData());
-            GLFWImage curImage = new GLFWImage(byteBuffer);
-            final long cursor = glfwCreateCursor(curImage, jmeCursor.getXHotSpot(), jmeCursor.getYHotSpot());
-            glfwSetCursor(context.getWindowHandle(), cursor);
+            Long glfwCursor = jmeToGlfwCursorMap.get(jmeCursor);
+
+            if (glfwCursor == null) {
+                glfwCursor = createGlfwCursor(jmeCursor);
+                jmeToGlfwCursorMap.put(jmeCursor, glfwCursor);
+            }
+
+            glfwSetCursor(context.getWindowHandle(), glfwCursor);
+        } else {
+            glfwSetCursor(context.getWindowHandle(), MemoryUtil.NULL);
         }
     }
 
     /**
-     * Simply converts the GLFW button code to a JME button code. If there is no match it just returns the GLFW button
-     * code. Bare in mind GLFW supports 8 different mouse buttons.
+     * Simply converts the GLFW button code to a JME button code. If there is no
+     * match it just returns the GLFW button code. Bear in mind GLFW supports 8
+     * different mouse buttons.
      *
      * @param glfwButton the raw GLFW button index.
      * @return the mapped {@link MouseInput} button id.
      */
     private int convertButton(final int glfwButton) {
-        if (glfwButton == GLFW_MOUSE_BUTTON_LEFT) {
+        switch (glfwButton) {
+            case GLFW_MOUSE_BUTTON_LEFT:
             return MouseInput.BUTTON_LEFT;
-        } else if(glfwButton == GLFW_MOUSE_BUTTON_MIDDLE) {
+            case GLFW_MOUSE_BUTTON_MIDDLE:
             return MouseInput.BUTTON_MIDDLE;
-        } else if(glfwButton == GLFW_MOUSE_BUTTON_RIGHT) {
+            case GLFW_MOUSE_BUTTON_RIGHT:
             return MouseInput.BUTTON_RIGHT;
+            default:
+                return glfwButton;
         }
-
-        return glfwButton;
     }
 }

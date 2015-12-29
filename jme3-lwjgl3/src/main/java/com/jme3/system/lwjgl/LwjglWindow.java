@@ -54,11 +54,9 @@ import java.util.logging.Logger;
 import org.lwjgl.Version;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.glfw.GLFWErrorCallback.createPrint;
 import static org.lwjgl.opengl.GL11.GL_FALSE;
 import static org.lwjgl.opengl.GL11.GL_TRUE;
 import static org.lwjgl.system.MemoryUtil.NULL;
-import org.lwjgl.system.Platform;
 
 /**
  * A wrapper class over the GLFW framework in LWJGL 3.
@@ -74,7 +72,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
     protected boolean wasActive = false;
     protected boolean autoFlush = true;
     protected boolean allowSwapBuffers = false;
-    private long window = -1;
+    private long window = NULL;
     private final JmeContext.Type type;
     private int frameRateLimit = -1;
     private double frameSleepTime;
@@ -104,7 +102,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
      * @param title the title to set
      */
     public void setTitle(final String title) {
-        if (created.get() && window != -1) {
+        if (created.get() && window != NULL) {
             glfwSetWindowTitle(window, title);
         }
     }
@@ -126,10 +124,16 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
      * @param settings the settings to apply when creating the context.
      */
     protected void createContext(final AppSettings settings) {        
-        glfwSetErrorCallback(errorCallback = createPrint(System.err));
-        
+        glfwSetErrorCallback(errorCallback = new GLFWErrorCallback() {
+            @Override
+            public void invoke(int error, long description) {
+                final String message = GLFWErrorCallback.getDescription(description);
+                listener.handleError(message, new Exception(message));
+            }
+        });
+       
         // make sure AWT is initialized before GLFW
-        if( Platform.get() == Platform.MACOSX ) java.awt.Toolkit.getDefaultToolkit();
+        java.awt.Toolkit.getDefaultToolkit();
         
         if (glfwInit() != GL_TRUE) {
             throw new IllegalStateException("Unable to initialize GLFW");
@@ -228,7 +232,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
 
         // TODO: When GLFW 3.2 is released and included in LWJGL 3.x then we should hopefully be able to set the window icon.
     }
-
+    
     /**
      * Destroy the context.
      */
@@ -238,12 +242,24 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
                 renderer.cleanup();
             }
 
+            if (errorCallback != null) {
             errorCallback.release();
-            windowSizeCallback.release();
-            windowFocusCallback.release();
+                errorCallback = null;
+            }
 
-            if (window != 0) {
+            if (windowSizeCallback != null) {
+            windowSizeCallback.release();
+                windowSizeCallback = null;
+            }
+
+            if (windowFocusCallback != null) {
+            windowFocusCallback.release();
+                windowFocusCallback = null;
+            }
+
+            if (window != NULL) {
                 glfwDestroyWindow(window);
+                window = NULL;
             }
         } catch (Exception ex) {
             listener.handleError("Failed to destroy context", ex);
@@ -295,8 +311,9 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
             super.internalCreate();
         } catch (Exception ex) {
             try {
-                if (window != -1) {
+                if (window != NULL) {
                     glfwDestroyWindow(window);
+                    window = NULL;
                 }
             } catch (Exception ex2) {
                 LOGGER.log(Level.WARNING, null, ex2);
@@ -317,6 +334,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         // If a restart is required, lets recreate the context.
         if (needRestart.getAndSet(false)) {
             try {
+                destroyContext();
                 createContext(settings);
             } catch (Exception ex) {
                 LOGGER.log(Level.SEVERE, "Failed to set display settings!", ex);
@@ -344,8 +362,6 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
                 listener.handleError("Error while swapping buffers", ex);
             }
         }
-
-        glfwPollEvents();
 
         // Subclasses just call GLObjectManager clean up objects here
         // it is safe .. for now.
@@ -376,6 +392,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
                 }
             }
         }
+        glfwPollEvents();
     }
 
     private void setFrameRateLimit(int frameRateLimit) {
@@ -388,11 +405,12 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
      */
 
     protected void deinitInThread() {
-        destroyContext();
-
         listener.destroy();
-        LOGGER.fine("Display destroyed.");
+
+        destroyContext();
         super.internalDestroy();
+
+        LOGGER.fine("Display destroyed.");
     }
 
     public void run() {
@@ -410,14 +428,14 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         }
 
         while (true) {
-            if (glfwWindowShouldClose(window) == GL_TRUE) {
-                listener.requestClose(false);
-            }
-
             runLoop();
 
             if (needClose.get()) {
                 break;
+            }
+
+            if (glfwWindowShouldClose(window) == GL_TRUE) {
+                listener.requestClose(false);
             }
         }
 
