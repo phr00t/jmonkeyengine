@@ -48,6 +48,7 @@ import org.lwjgl.glfw.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -201,8 +202,12 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         });
 
         // Center the window
-        if (!settings.isFullscreen() && Type.Display.equals(type)) {
-            glfwSetWindowPos(window, (videoMode.width() - settings.getWidth()) / 2, (videoMode.height() - settings.getHeight()) / 2);
+        if( Type.Display.equals(type) ) {
+            if (!settings.isFullscreen()) {
+                glfwSetWindowPos(window, (videoMode.width() - settings.getWidth()) / 2, (videoMode.height() - settings.getHeight()) / 2);
+            } else {
+                glfwSetWindowSize(window, settings.getWidth(), settings.getHeight());               
+            }
         }
 
         // Make the OpenGL context current

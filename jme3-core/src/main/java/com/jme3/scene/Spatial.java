@@ -348,10 +348,11 @@ public abstract class Spatial implements Savable, Cloneable, Collidable, Cloneab
      * (should be rendered), false if outside.
      */
     public boolean checkCulling(Camera cam) {
-        if (refreshFlags != 0) {
+        //if (refreshFlags != 0) {
             // this crash is the bane of my existance... instead of crashing, just log a warning & continue
-            logger.log(Level.WARNING, "Warning: spatial ''{0}'' was modified after updateGeometricState()!", getName());
-        }
+            // you know what... just skip the log for now
+            //logger.log(Level.WARNING, "Warning: spatial ''{0}'' was modified after updateGeometricState()!", getName());
+        //}
 
         CullHint cm = getCullHint();
         assert cm != CullHint.Inherit;
