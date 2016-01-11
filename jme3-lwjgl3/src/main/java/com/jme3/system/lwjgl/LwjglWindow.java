@@ -39,11 +39,17 @@ import com.jme3.input.TouchInput;
 import com.jme3.input.lwjgl.GlfwJoystickInput;
 import com.jme3.input.lwjgl.GlfwKeyInput;
 import com.jme3.input.lwjgl.GlfwMouseInput;
+import com.jme3.math.ColorRGBA;
+import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.ViewPort;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext;
 import com.jme3.system.JmeSystem;
 import com.jme3.system.NanoTimer;
+import com.jme3.texture.FrameBuffer;
+import com.jme3.texture.Texture;
+import com.jme3.texture.Texture2D;
 import org.lwjgl.glfw.*;
 
 import java.awt.*;
@@ -242,11 +248,6 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
 
         allowSwapBuffers = settings.isSwapBuffers();
 
-        // scale up viewports if we are using a retina display
-        if( isRetinaDisplay() ) {
-            RenderManager.setViewportScale(2f, 2f);
-        }
-        
         // TODO: When GLFW 3.2 is released and included in LWJGL 3.x then we should hopefully be able to set the window icon.
     }
     

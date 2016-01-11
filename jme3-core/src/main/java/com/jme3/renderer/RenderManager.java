@@ -959,12 +959,6 @@ public class RenderManager {
         }
     }
     
-    private static float scaleVPX = 1f, scaleVPY = 1f;
-    public static void setViewportScale(float xscale, float yscale) {
-        scaleVPX = xscale;
-        scaleVPY = yscale;
-    }    
-
     private void setViewPort(Camera cam) {
         // this will make sure to update viewport only if needed
         if (cam != prevCam || cam.isViewportChanged()) {
@@ -974,15 +968,9 @@ public class RenderManager {
             int viewY2 = (int) (cam.getViewPortTop() * cam.getHeight());
             viewWidth  = viewX2 - viewX;
             viewHeight = viewY2 - viewY;
-            if( scaleVPX != 1f || scaleVPY != 1f ) {
-                viewWidth = (int)((float)viewWidth * scaleVPX);
-                viewHeight = (int)((float)viewHeight * scaleVPY);
-                viewX = (int)((float)viewX * scaleVPX);
-                viewY = (int)((float)viewY * scaleVPY);
-            }
             uniformBindingManager.setViewPort(viewX, viewY, viewWidth, viewHeight);
-            renderer.setViewPort(viewX, viewY, viewWidth, viewHeight);
             renderer.setClipRect(viewX, viewY, viewWidth, viewHeight);
+            renderer.setViewPort(viewX, viewY, viewWidth, viewHeight);
             cam.clearViewportChanged();
             prevCam = cam;
 
