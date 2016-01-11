@@ -39,6 +39,7 @@ import com.jme3.input.TouchInput;
 import com.jme3.input.lwjgl.GlfwJoystickInput;
 import com.jme3.input.lwjgl.GlfwKeyInput;
 import com.jme3.input.lwjgl.GlfwMouseInput;
+import com.jme3.renderer.RenderManager;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext;
 import com.jme3.system.JmeSystem;
@@ -169,6 +170,13 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         glfwWindowHint(GLFW_SAMPLES, settings.getSamples());
         glfwWindowHint(GLFW_STEREO, settings.useStereo3D() ? GL_TRUE : GL_FALSE);
         glfwWindowHint(GLFW_REFRESH_RATE, settings.getFrequency());
+        
+        if( settings.getRenderer().equals(AppSettings.LWJGL_OPENGL3) ) {
+            glfwWindowHint(GLFW.GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+            glfwWindowHint(GLFW.GLFW_OPENGL_PROFILE, GLFW.GLFW_OPENGL_CORE_PROFILE);
+            glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, Version.VERSION_MAJOR);
+            glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, Version.VERSION_MINOR);
+        }
 
         // Not sure how else to support bits per pixel
         if (settings.getBitsPerPixel() == 24) {
@@ -205,8 +213,6 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         if( Type.Display.equals(type) ) {
             if (!settings.isFullscreen()) {
                 glfwSetWindowPos(window, (videoMode.width() - settings.getWidth()) / 2, (videoMode.height() - settings.getHeight()) / 2);
-            } else {
-                glfwSetWindowSize(window, settings.getWidth(), settings.getHeight());               
             }
         }
 
@@ -236,6 +242,11 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
 
         allowSwapBuffers = settings.isSwapBuffers();
 
+        // scale up viewports if we are using a retina display
+        if( isRetinaDisplay() ) {
+            RenderManager.setViewportScale(2f, 2f);
+        }
+        
         // TODO: When GLFW 3.2 is released and included in LWJGL 3.x then we should hopefully be able to set the window icon.
     }
     

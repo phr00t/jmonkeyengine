@@ -116,6 +116,10 @@ public abstract class LwjglContext implements JmeContext {
         NativeLibraryLoader.loadNativeLibrary("jemalloc-lwjgl3", true);
         NativeLibraryLoader.loadNativeLibrary("lwjgl3", true);
     }
+    
+    public boolean isRetinaDisplay() {
+        return GLFW.glfwGetVersionString().contains("retina");
+    }
 
     protected int getNumSamplesToUse() {
         int samples = 0;

@@ -120,7 +120,7 @@ public final class GLRenderer implements Renderer {
     public EnumSet<Caps> getCaps() {
         return caps;
     }
-
+    
     // Not making public yet ...
     public EnumMap<Limits, Integer> getLimits() {
         return limits;
