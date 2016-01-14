@@ -164,6 +164,13 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
             settings.setResolution(videoMode.width(), videoMode.height());
         }
 
+        // if we are not fullscreen, don't make a window that is too big for the videoMode
+        // leave some room for window decorations, etc.
+        if( settings.isFullscreen() == false ) {
+            if( videoMode.width() - 100 < settings.getWidth() ) settings.setWidth(videoMode.width() - 100);
+            if( videoMode.height() - 100 < settings.getHeight() ) settings.setHeight(videoMode.height() - 100);
+        }
+        
         window = glfwCreateWindow(settings.getWidth(), settings.getHeight(), settings.getTitle(), monitor, NULL);
 
         if (window == NULL) {

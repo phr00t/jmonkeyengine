@@ -601,7 +601,6 @@ public final class AppSettings extends HashMap<String, Object> {
         setHeight(height);
     }
 
-
     /**
      * @param value the minimum width the settings window will allow for the rendering display.
      * (Default: 0)
