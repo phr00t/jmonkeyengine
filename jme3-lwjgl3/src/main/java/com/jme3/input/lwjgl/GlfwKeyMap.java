@@ -166,6 +166,7 @@ public class GlfwKeyMap {
     }
 
     public static int toJmeKeyCode(int glfwKey) {
+        if( glfwKey < 0 ) return KEY_UNKNOWN;
         return glfwToJmeKeyMap[glfwKey];
     }
 }
