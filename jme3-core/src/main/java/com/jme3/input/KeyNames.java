@@ -181,6 +181,7 @@ public class KeyNames {
     }
 
     public static String getName(int keyId) {
+        if( keyId < 0 || keyId >= KEY_NAMES.length ) return KEY_NAMES[KEY_UNKNOWN];
         return KEY_NAMES[keyId];
     }
 }
