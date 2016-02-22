@@ -181,15 +181,19 @@ public class Node extends Spatial {
     }
 
     private void addUpdateChildren( SafeArrayList<Spatial> results ) {
-        for(int i=0;i<children.size();i++){
-            Spatial child = children.get(i);
-            if( child == null ) continue;
-            if( child.requiresUpdates() ) {
-                results.add(child);
+        try {
+            for(int i=0;i<children.size();i++){
+                Spatial child = children.get(i);
+                if( child == null ) continue;
+                if( child.requiresUpdates() ) {
+                    results.add(child);
+                }
+                if( child instanceof Node ) {
+                    ((Node)child).addUpdateChildren(results);
+                }
             }
-            if( child instanceof Node ) {
-                ((Node)child).addUpdateChildren(results);
-            }
+        } catch(Exception e) {
+            logger.log(Level.SEVERE, "addUpdateChildren (threading problem?) for {0}: {1}", new Object[]{getName(), e.toString()});
         }
     }
 
