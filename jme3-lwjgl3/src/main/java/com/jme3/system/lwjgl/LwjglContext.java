@@ -116,7 +116,7 @@ public abstract class LwjglContext implements JmeContext {
         NativeLibraryLoader.loadNativeLibrary("jemalloc-lwjgl3", true);
         NativeLibraryLoader.loadNativeLibrary("lwjgl3", true);
     }
-    
+
     public boolean isRetinaDisplay() {
         return GLFW.glfwGetVersionString().contains("retina");
     }
@@ -183,7 +183,7 @@ public abstract class LwjglContext implements JmeContext {
         }
 
         if (capabilities.GL_ARB_debug_output && settings.getBoolean("GraphicsDebug")) {
-            ARBDebugOutput.glDebugMessageCallbackARB(new LwjglGLDebugOutputHandler(), 0); // User param is zero. Not sure what we could use that for.
+            ARBDebugOutput.glDebugMessageCallbackARB(new LwjglGLDebugOutputHandler(), 0);
         }
 
         renderer.setMainFrameBufferSrgb(settings.isGammaCorrection());
@@ -201,7 +201,6 @@ public abstract class LwjglContext implements JmeContext {
         if (joyInput != null) {
             joyInput.initialize();
         }
-
         renderable.set(true);
     }
 
