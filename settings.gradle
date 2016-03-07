@@ -40,6 +40,7 @@ if(buildAndroidExamples == "true"){
     include 'jme3-android-examples'
 }
 
-if(buildSdkProject == "true"){
-    include 'sdk'
-}
+// speed up build by skipping sdk for now
+//if(buildSdkProject == "true"){
+//    include 'sdk'
+//}
