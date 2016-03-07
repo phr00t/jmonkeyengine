@@ -106,7 +106,7 @@ public class GlfwKeyInput implements KeyInput {
             return;
         }
 
-        keyCallback.release();
+        keyCallback.free();
         logger.fine("Keyboard destroyed.");
     }
 

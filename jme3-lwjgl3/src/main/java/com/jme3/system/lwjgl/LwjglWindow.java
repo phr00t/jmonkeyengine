@@ -238,6 +238,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         // Make the window visible
         if (Type.Display.equals(type)) {
             glfwShowWindow(window);
+            glfwFocusWindow(window);
         }
 
         // Add a resize callback which delegates to the listener
@@ -264,17 +265,17 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
             }
 
             if (errorCallback != null) {
-                errorCallback.release();
+                errorCallback.free();
                 errorCallback = null;
             }
 
             if (windowSizeCallback != null) {
-                windowSizeCallback.release();
+                windowSizeCallback.free();
                 windowSizeCallback = null;
             }
 
             if (windowFocusCallback != null) {
-                windowFocusCallback.release();
+                windowFocusCallback.free();
                 windowFocusCallback = null;
             }
 

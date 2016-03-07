@@ -193,9 +193,9 @@ public class GlfwMouseInput implements MouseInput {
             return;
         }
 
-        cursorPosCallback.release();
-        scrollCallback.release();
-        mouseButtonCallback.release();
+        cursorPosCallback.free();
+        scrollCallback.free();
+        mouseButtonCallback.free();
         for (long glfwCursor : jmeToGlfwCursorMap.values()) {
             glfwDestroyCursor(glfwCursor);
         }
