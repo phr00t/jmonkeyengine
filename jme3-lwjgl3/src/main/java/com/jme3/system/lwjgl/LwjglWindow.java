@@ -139,7 +139,8 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
 
         glfwDefaultWindowHints();
 
-        if (settings.getRenderer().equals(AppSettings.LWJGL_OPENGL3)) {
+        // just use defaults, which should provide the best compatibility
+        /*if (settings.getRenderer().equals(AppSettings.LWJGL_OPENGL3)) {
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_FALSE);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -147,7 +148,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
         } else {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-        }
+        }*/
 
         if (settings.getBoolean("RendererDebug")) {
             glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
@@ -159,7 +160,6 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
 
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, settings.isResizable() ? GLFW_TRUE : GLFW_FALSE);
-
         glfwWindowHint(GLFW_DOUBLE_BUFFER, GLFW_TRUE);
         glfwWindowHint(GLFW_DEPTH_BITS, settings.getDepthBits());
         glfwWindowHint(GLFW_STENCIL_BITS, settings.getStencilBits());
