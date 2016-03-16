@@ -251,30 +251,33 @@ public class RenderManager {
     }
 
     /**
-     * Returns a read-only list of all pre ViewPorts
-     * @return a read-only list of all pre ViewPorts
+     * Returns a list of all pre ViewPorts
+     * @return a list of all pre ViewPorts
      * @see #createPreView(java.lang.String, com.jme3.renderer.Camera) 
      */
     public List<ViewPort> getPreViews() {
-        return Collections.unmodifiableList(preViewPorts);
+        //return Collections.unmodifiableList(preViewPorts);
+        return preViewPorts; // we live on the edge in Phr00t's build
     }
 
     /**
-     * Returns a read-only list of all main ViewPorts
-     * @return a read-only list of all main ViewPorts
+     * Returns a list of all main ViewPorts
+     * @return a list of all main ViewPorts
      * @see #createMainView(java.lang.String, com.jme3.renderer.Camera) 
      */
     public List<ViewPort> getMainViews() {
-        return Collections.unmodifiableList(viewPorts);
+        //return Collections.unmodifiableList(viewPorts);
+        return viewPorts; // we live on the edge in Phr00t's build
     }
 
     /**
-     * Returns a read-only list of all post ViewPorts
-     * @return a read-only list of all post ViewPorts
+     * Returns a list of all post ViewPorts
+     * @return a list of all post ViewPorts
      * @see #createPostView(java.lang.String, com.jme3.renderer.Camera) 
      */
     public List<ViewPort> getPostViews() {
-        return Collections.unmodifiableList(postViewPorts);
+        //return Collections.unmodifiableList(postViewPorts);
+        return postViewPorts; // we live on the edge in Phr00t's build
     }
 
     /**
