@@ -32,45 +32,40 @@
 package com.jme3.audio.lwjgl;
 
 import com.jme3.audio.openal.ALC;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import org.lwjgl.openal.AL;
 import org.lwjgl.openal.ALC10;
-import org.lwjgl.openal.ALContext;
-import org.lwjgl.openal.ALDevice;
+import static org.lwjgl.openal.ALC10.alcCloseDevice;
+import static org.lwjgl.openal.ALC10.alcCreateContext;
+import static org.lwjgl.openal.ALC10.alcMakeContextCurrent;
+import static org.lwjgl.openal.ALC10.alcOpenDevice;
+import org.lwjgl.openal.ALCCapabilities;
 import org.lwjgl.openal.SOFTPauseDevice;
 
 public class LwjglALC implements ALC {
-
-    private ALDevice device;
-    private ALContext context;
 
     private long contextId;
     private long deviceId;
 
     public void createALC() {
-        device = ALDevice.create();
-        context = ALContext.create(device);
-        context.makeCurrent();
+        // Can call "alc" functions at any time
+        deviceId = alcOpenDevice((ByteBuffer)null);
+        ALCCapabilities deviceCaps = org.lwjgl.openal.ALC.createCapabilities(deviceId);
 
-        contextId = ALC10.alcGetCurrentContext();
-        deviceId = ALC10.alcGetContextsDevice(contextId);
+        contextId = alcCreateContext(deviceId, (ByteBuffer)null);
+        alcMakeContextCurrent(contextId);
+        AL.createCapabilities(deviceCaps);
     }
 
     public void destroyALC() {
-        if (context != null) {
-            context.destroy();
-            context = null;
-        }
-
-        if (device != null) {
-            // some reason this method doesn't exist & causes a crash
-            // commenting out (this is generally called on exit anyway)
-            //device.destroy();
-            device = null;
+        if (deviceId != 0) {
+            alcCloseDevice(deviceId);
         }
     }
 
     public boolean isCreated() {
-        return context != null;
+        return contextId != 0;
     }
 
     public String alcGetString(final int parameter) {
