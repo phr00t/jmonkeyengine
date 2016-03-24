@@ -216,6 +216,14 @@ public class InstancedGeometry extends Geometry {
     }
 
     @Override
+    public CullHint getCullHint() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getCullHint();
+        }
+        return super.getCullHint();
+    }
+    
+    @Override
     public Matrix4f getWorldMatrix() {
         if( forceLinkedGeometry != null ) {
             return forceLinkedGeometry.getWorldMatrix();
