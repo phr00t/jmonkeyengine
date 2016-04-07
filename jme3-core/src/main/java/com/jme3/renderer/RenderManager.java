@@ -54,11 +54,13 @@ import com.jme3.scene.*;
 import com.jme3.scene.Spatial.BatchHint;
 import com.jme3.scene.instancing.InstancedGeometry;
 import com.jme3.shader.Uniform;
+import com.jme3.shader.Shader;
 import com.jme3.shader.UniformBinding;
 import com.jme3.shader.UniformBindingManager;
 import com.jme3.system.NullRenderer;
 import com.jme3.system.Timer;
 import com.jme3.util.SafeArrayList;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -256,7 +258,6 @@ public class RenderManager {
      * @see #createPreView(java.lang.String, com.jme3.renderer.Camera) 
      */
     public List<ViewPort> getPreViews() {
-        //return Collections.unmodifiableList(preViewPorts);
         return preViewPorts; // we live on the edge in Phr00t's build
     }
 
@@ -266,7 +267,6 @@ public class RenderManager {
      * @see #createMainView(java.lang.String, com.jme3.renderer.Camera) 
      */
     public List<ViewPort> getMainViews() {
-        //return Collections.unmodifiableList(viewPorts);
         return viewPorts; // we live on the edge in Phr00t's build
     }
 
@@ -276,7 +276,6 @@ public class RenderManager {
      * @see #createPostView(java.lang.String, com.jme3.renderer.Camera) 
      */
     public List<ViewPort> getPostViews() {
-        //return Collections.unmodifiableList(postViewPorts);
         return postViewPorts; // we live on the edge in Phr00t's build
     }
 
@@ -493,8 +492,8 @@ public class RenderManager {
      * Updates the given list of uniforms with {@link UniformBinding uniform bindings}
      * based on the current world state.
      */
-    public void updateUniformBindings(List<Uniform> params) {
-        uniformBindingManager.updateUniformBindings(params);
+    public void updateUniformBindings(Shader shader) {
+        uniformBindingManager.updateUniformBindings(shader);
     }
 
     /**
@@ -625,7 +624,9 @@ public class RenderManager {
 
             gm.getMaterial().preload(this);
             Mesh mesh = gm.getMesh();
-            if (mesh != null) {
+            if (mesh != null
+                    && mesh.getVertexCount() != 0
+                    && mesh.getTriangleCount() != 0) {
                 for (VertexBuffer vb : mesh.getBufferList().getArray()) {
                     if (vb.getData() != null && vb.getUsage() != VertexBuffer.Usage.CpuOnly) {
                         renderer.updateBufferData(vb);
@@ -650,8 +651,10 @@ public class RenderManager {
      * <p>
      * In addition to enqueuing the visible geometries, this method
      * also scenes which cast or receive shadows, by putting them into the
-     * RenderQueue's {@link RenderQueue#renderShadowQueue(GeometryList, RenderManager, Camera, boolean) shadow queue}.
-     * Each Spatial which has its {@link Spatial#setShadowMode(com.jme3.renderer.queue.RenderQueue.ShadowMode) shadow mode}
+     * RenderQueue's 
+     * {@link RenderQueue#addToShadowQueue(com.jme3.scene.Geometry, com.jme3.renderer.queue.RenderQueue.ShadowMode) 
+     * shadow queue}. Each Spatial which has its 
+     * {@link Spatial#setShadowMode(com.jme3.renderer.queue.RenderQueue.ShadowMode) shadow mode}
      * set to not off, will be put into the appropriate shadow queue, note that
      * this process does not check for frustum culling on any 
      * {@link ShadowMode#Cast shadow casters}, as they don't have to be
@@ -961,7 +964,7 @@ public class RenderManager {
             rq.renderQueue(Bucket.Translucent, this, vp.getCamera(), true);
         }
     }
-    
+
     private void setViewPort(Camera cam) {
         // this will make sure to update viewport only if needed
         if (cam != prevCam || cam.isViewportChanged()) {
@@ -972,8 +975,8 @@ public class RenderManager {
             viewWidth  = viewX2 - viewX;
             viewHeight = viewY2 - viewY;
             uniformBindingManager.setViewPort(viewX, viewY, viewWidth, viewHeight);
-            renderer.setClipRect(viewX, viewY, viewWidth, viewHeight);
             renderer.setViewPort(viewX, viewY, viewWidth, viewHeight);
+            renderer.setClipRect(viewX, viewY, viewWidth, viewHeight);
             cam.clearViewportChanged();
             prevCam = cam;
 

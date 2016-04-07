@@ -57,6 +57,7 @@ import com.jme3.scene.VertexBuffer.Type;
 import com.jme3.scene.VertexBuffer.Usage;
 import com.jme3.util.BufferUtils;
 import com.jme3.util.TempVars;
+import com.jme3.util.clone.Cloner;
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
@@ -323,7 +324,6 @@ public class InstancedGeometry extends Geometry {
                  (m1.m02 - m1.m20) / w4,
                  (m1.m10 - m1.m01) / w4, w);
     }
-    
     private void updateInstance(Matrix4f worldMatrix, float[] store, 
                                 int offset, Matrix3f tempMat3, 
                                 Quaternion tempQuat) {
@@ -333,7 +333,6 @@ public class InstancedGeometry extends Geometry {
         // NOTE: No need to take the transpose in order to encode
         // into quaternion, the multiplication in the shader is vec * quat
         // apparently...
-        //tempQuat.fromRotationMatrix(tempMat3);
         quickFromRotation(tempQuat, tempMat3);
 
         // Column-major encoding. The "W" field in each of the encoded
@@ -413,6 +412,27 @@ public class InstancedGeometry extends Geometry {
         }
         if (geometries[idx2] != null) {
             InstancedNode.setGeometryStartIndex2(geometries[idx2], idx2);
+        }
+    }
+    
+    private void sanitize(boolean insideEntriesNonNull) {
+        if (firstUnusedIndex >= geometries.length) {
+            throw new AssertionError();
+        }
+        for (int i = 0; i < geometries.length; i++) {
+            if (i < firstUnusedIndex) {
+                if (geometries[i] == null) {
+                    if (insideEntriesNonNull) {
+                        throw new AssertionError();
+                    }  
+                } else if (InstancedNode.getGeometryStartIndex2(geometries[i]) != i) {
+                    throw new AssertionError();
+                }
+            } else {
+                if (geometries[i] != null) {
+                    throw new AssertionError();
+                }
+            }
         }
     }
     
@@ -511,6 +531,18 @@ public class InstancedGeometry extends Geometry {
             allData.addAll(Arrays.asList(globalInstanceData));
         }
         return allData.toArray(new VertexBuffer[allData.size()]);
+    }
+
+    /**
+     *  Called internally by com.jme3.util.clone.Cloner.  Do not call directly.
+     */
+    @Override
+    public void cloneFields( Cloner cloner, Object original ) {
+        super.cloneFields(cloner, original);
+
+        this.globalInstanceData = cloner.clone(globalInstanceData);
+        this.transformInstanceData = cloner.clone(transformInstanceData);
+        this.geometries = cloner.clone(geometries);
     }
 
     @Override

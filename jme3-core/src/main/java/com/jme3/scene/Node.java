@@ -36,8 +36,11 @@ import com.jme3.collision.Collidable;
 import com.jme3.collision.CollisionResults;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
+import com.jme3.export.Savable;
 import com.jme3.material.Material;
 import com.jme3.util.SafeArrayList;
+import com.jme3.util.TempVars;
+import com.jme3.util.clone.Cloner;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +91,7 @@ public class Node extends Spatial {
     public Node() {
         this(null);
     }
-    
+
     /**
      * Constructor instantiates a new <code>Node</code> with a default empty
      * list for containing children.
@@ -144,6 +147,18 @@ public class Node extends Spatial {
     }
 
     @Override
+    protected void setMatParamOverrideRefresh() {
+        super.setMatParamOverrideRefresh();
+        for (Spatial child : children.getArray()) {
+            if ((child.refreshFlags & RF_MATPARAM_OVERRIDE) != 0) {
+                continue;
+            }
+
+            child.setMatParamOverrideRefresh();
+        }
+    }
+
+    @Override
     protected void updateWorldBound(){
         super.updateWorldBound();
         
@@ -154,7 +169,7 @@ public class Node extends Spatial {
             Spatial child = children.get(i);
             if( child == null ) continue;
             // child bound is assumed to be updated
-            //assert (child.refreshFlags & RF_BOUND) == 0;
+            assert (child.refreshFlags & RF_BOUND) == 0;
             if (resultBound != null) {
                 // merge current world bound with child world bound
                 resultBound.mergeLocal(child.getWorldBound());
@@ -185,12 +200,12 @@ public class Node extends Spatial {
             for(int i=0;i<children.size();i++){
                 Spatial child = children.get(i);
                 if( child == null ) continue;
-                if( child.requiresUpdates() ) {
-                    results.add(child);
-                }
-                if( child instanceof Node ) {
-                    ((Node)child).addUpdateChildren(results);
-                }
+            if( child.requiresUpdates() ) {
+                results.add(child);
+            }
+            if( child instanceof Node ) {
+                ((Node)child).addUpdateChildren(results);
+            }
             }
         } catch(Exception e) {
             logger.log(Level.SEVERE, "addUpdateChildren (threading problem?) for {0}: {1}", new Object[]{getName(), e.toString()});
@@ -258,6 +273,9 @@ public class Node extends Spatial {
             // combine with parent transforms- same for all spatial
             // subclasses.
             updateWorldTransforms();
+        }
+        if ((refreshFlags & RF_MATPARAM_OVERRIDE) != 0) {
+            updateMatParamOverrides();
         }
 
         refreshFlags &= ~RF_CHILD_LIGHTLIST;
@@ -356,7 +374,6 @@ public class Node extends Spatial {
                 child.getParent().detachChild(child);
             }
             child.setParent(this);
-            
             if( index == -1 ) {
                 children.add(child);
             } else children.add(index, child);
@@ -366,6 +383,7 @@ public class Node extends Spatial {
             // transform update down the tree-
             child.setTransformRefresh();
             child.setLightListRefresh();
+            child.setMatParamOverrideRefresh();
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE,"Child ({0}) attached to this node ({1})",
                         new Object[]{child.getName(), getName()});
@@ -448,7 +466,8 @@ public class Node extends Spatial {
             child.setTransformRefresh();
             // lights are also inherited from parent
             child.setLightListRefresh();
-                        
+            child.setMatParamOverrideRefresh();
+            
             invalidateUpdateList();
         }
         return child;
@@ -721,6 +740,16 @@ public class Node extends Spatial {
 
     @Override
     public Spatial deepClone(){
+        Node nodeClone = (Node)super.deepClone();
+
+        // Reset the fields of the clone that should be in a 'new' state.
+        nodeClone.updateList = null;
+        nodeClone.updateListValid = false; // safe because parent is nulled out in super.clone()
+
+        return nodeClone;
+    }
+
+    public Spatial oldDeepClone(){
         Node nodeClone = (Node) super.clone();
         nodeClone.children = new SafeArrayList<Spatial>(Spatial.class);
         for (Spatial child : children){
@@ -731,6 +760,20 @@ public class Node extends Spatial {
         return nodeClone;
     }
 
+    /**
+     *  Called internally by com.jme3.util.clone.Cloner.  Do not call directly.
+     */
+    @Override
+    public void cloneFields( Cloner cloner, Object original ) {
+        super.cloneFields(cloner, original);
+
+        this.children = cloner.clone(children);
+
+        // Only the outer cloning thing knows whether this should be nulled
+        // or not... after all, we might be cloning a root node in which case
+        // cloning this list is fine.
+        this.updateList = cloner.clone(updateList);
+    }
     @Override
     public void write(JmeExporter e) throws IOException {
         super.write(e);

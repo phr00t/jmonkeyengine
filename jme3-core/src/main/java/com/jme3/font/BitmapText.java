@@ -39,6 +39,7 @@ import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.RenderManager;
 import com.jme3.scene.Node;
+import com.jme3.util.clone.Cloner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -87,8 +88,26 @@ public class BitmapText extends Node {
 
     public BitmapTextPage[] getPages() {
         return textPages;
+    }    
+
+    /**
+     *  Called internally by com.jme3.util.clone.Cloner.  Do not call directly.
+     */
+    @Override
+    public void cloneFields( Cloner cloner, Object original ) {
+        super.cloneFields(cloner, original);
+
+        for( int i = 0; i < textPages.length; i++ ) {
+            textPages[i] = cloner.clone(textPages[i]);
+        }
+        this.block = cloner.clone(block);
+
+        // Change in behavior: The 'letters' field was not cloned or recreated
+        // before.  I'm not sure how this worked and suspect BitmapText was just
+        // not cloneable if you planned to change the text later. -pspeed
+        this.letters = new Letters(font, block, letters.getQuad().isRightToLeft());
     }
-    
+
     public BitmapFont getFont() {
         return font;
     }
@@ -250,7 +269,6 @@ public class BitmapText extends Node {
         float height = getLineHeight() * block.getLineCount();
         return height;
     }
-    
     /**
      * @return width of line
      */
@@ -278,7 +296,7 @@ public class BitmapText extends Node {
         }
         return letters;
     }
-    
+
     /**
      * @return line count
      */
