@@ -82,6 +82,16 @@ public class TechniqueDef implements Savable {
         MultiPass,
 
         /**
+         * Enable light rendering by using a single pass, and also uses Image based lighting for global lighting
+         * Usually used for PBR
+         * <p>
+         * An array of light positions and light colors is passed to the shader
+         * containing the world light list for the geometry being rendered.
+         * Also Light probes are passed to the shader.
+         */
+        SinglePassAndImageBased,
+
+        /**
          * @deprecated OpenGL1 is not supported anymore
          */
         @Deprecated
@@ -92,6 +102,15 @@ public class TechniqueDef implements Savable {
         Disable,
         InPass,
         PostPass,
+    }
+    
+    /**
+     * Define in what space the light data should be sent to the shader.
+     */
+    public enum LightSpace {
+        World,
+        View,
+        Legacy
     }
 
     private EnumSet<Caps> requiredCaps = EnumSet.noneOf(Caps.class);
@@ -120,6 +139,8 @@ public class TechniqueDef implements Savable {
     private TechniqueDefLogic logic;
 
     private ArrayList<UniformBinding> worldBinds;
+    //The space in which the light should be transposed before sending to the shader.
+    private LightSpace lightSpace;
 
     /**
      * Creates a new technique definition.
@@ -183,6 +204,14 @@ public class TechniqueDef implements Savable {
      */
     public void setLightMode(LightMode lightMode) {
         this.lightMode = lightMode;
+        //if light space is not specified we set it to Legacy
+        if(lightSpace == null){
+            if(lightMode== LightMode.MultiPass){
+                lightSpace = LightSpace.Legacy;
+            }else{
+                lightSpace = LightSpace.World;
+            }
+        }
     }
     
     public void setLogic(TechniqueDefLogic logic) {
@@ -694,5 +723,21 @@ public class TechniqueDef implements Savable {
                 + ", usesNodes=" + usesNodes
                 + ", renderState=" + renderState
                 + ", forcedRenderState=" + forcedRenderState + "]";
+    }
+
+    /**
+     * Returns the space in which the light data should be passed to the shader.
+     * @return the light space
+     */
+    public LightSpace getLightSpace() {
+        return lightSpace;
+    }
+
+    /**
+     * Sets the space in which the light data should be passed to the shader.
+     * @param lightSpace the light space
+     */
+    public void setLightSpace(LightSpace lightSpace) {
+        this.lightSpace = lightSpace;
     }
 }
