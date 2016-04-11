@@ -75,6 +75,18 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     // Version #2: Fixed issue with RenderState.apply*** flags not getting exported
     public static final int SAVABLE_VERSION = 2;
     private static final Logger logger = Logger.getLogger(Material.class.getName());
+    private static final RenderState additiveLight = new RenderState();
+    private static final RenderState depthOnly = new RenderState();
+
+    static {
+        depthOnly.setDepthTest(true);
+        depthOnly.setDepthWrite(true);
+        depthOnly.setFaceCullMode(RenderState.FaceCullMode.Back);
+        depthOnly.setColorWrite(false);
+
+        additiveLight.setBlendMode(RenderState.BlendMode.AlphaAdditive);
+        additiveLight.setDepthWrite(false);
+    }
     private AssetKey key;
     private String name;
     private MaterialDef def;
@@ -86,6 +98,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     private boolean transparent = false;
     private boolean receivesShadows = false;
     private int sortingId = -1;
+    private transient ColorRGBA ambientLightColor = new ColorRGBA(0, 0, 0, 1);
 
     public Material(MaterialDef def) {
         if (def == null) {
@@ -257,6 +270,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             String otherDefName = other.technique != null
                     ? other.technique.getDef().getName()
                     : TechniqueDef.DEFAULT_TECHNIQUE_NAME;
+
             if (!thisDefName.equals(otherDefName)) {
                 return false;
             }
@@ -266,18 +280,17 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         try {
             for(int i=0;i<paramValues.size();i++) {
                 String paramKey = paramValues.getKey(i);
+            MatParam thisParam = this.getParam(paramKey);
+            MatParam otherParam = other.getParam(paramKey);
 
-                MatParam thisParam = this.getParam(paramKey);
-                MatParam otherParam = other.getParam(paramKey);
+            // This param does not exist in compared mat
+            if (otherParam == null) {
+                return false;
+            }
 
-                // This param does not exist in compared mat
-                if (otherParam == null) {
-                    return false;
-                }
-
-                if (!otherParam.equals(thisParam)) {
-                    return false;
-                }
+            if (!otherParam.equals(thisParam)) {
+                return false;
+            }
             }
         } catch(Exception e) {
             // parameters changed in another thread, just return false for equals
@@ -716,30 +729,29 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         if (tech == null) {
             EnumSet<Caps> rendererCaps = renderManager.getRenderer().getCaps();
             List<TechniqueDef> techDefs = def.getTechniqueDefs(name);
-                if (techDefs == null || techDefs.isEmpty()) {
+
+            if (techDefs == null || techDefs.isEmpty()) {
                 throw new IllegalArgumentException(
                         String.format("The requested technique %s is not available on material %s", name, def.getName()));
-                }
+            }
 
-                TechniqueDef lastTech = null;
-                for (TechniqueDef techDef : techDefs) {
-                    if (rendererCaps.containsAll(techDef.getRequiredCaps())) {
-                        // use the first one that supports all the caps
-                        tech = new Technique(this, techDef);
-                        techniques.put(name, tech);
+            TechniqueDef lastTech = null;
+            for (TechniqueDef techDef : techDefs) {
+                if (rendererCaps.containsAll(techDef.getRequiredCaps())) {
+                    // use the first one that supports all the caps
+                    tech = new Technique(this, techDef);
+                    techniques.put(name, tech);
                     if (tech.getDef().getLightMode() == renderManager.getPreferredLightMode()
                             || tech.getDef().getLightMode() == LightMode.Disable) {
-                            break;
-                        }
+                        break;
                     }
-                    lastTech = techDef;
                 }
-                if (tech == null) {
-                throw new UnsupportedOperationException(
-                        String.format("No technique '%s' on material "
-                                + "'%s' is supported by the video hardware. "
-                                + "The capabilities %s are required.",
-                                name, def.getName(), lastTech.getRequiredCaps()));
+                lastTech = techDef;
+            }
+            if (tech == null) {
+                throw new UnsupportedOperationException("No default technique on material '" + def.getName() + "'\n"
+                        + " is supported by the video hardware. The caps "
+                        + lastTech.getRequiredCaps() + " are required.");
             }
         } else if (technique == tech) {
             // attempting to switch to an already
@@ -755,31 +767,33 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     }
 
     private int applyOverrides(Renderer renderer, Shader shader, List<MatParamOverride> overrides, int unit) {
-            for (MatParamOverride override : overrides) {
-                VarType type = override.getVarType();
+        for (MatParamOverride override : overrides) {
+            VarType type = override.getVarType();
 
-                MatParam paramDef = def.getMaterialParam(override.getName());
-                if (paramDef == null || paramDef.getVarType() != type || !override.isEnabled()) {
-                    continue;
-                }
+            MatParam paramDef = def.getMaterialParam(override.getName());
 
-                Uniform uniform = shader.getUniform(override.getPrefixedName());
-                if (override.getValue() != null) {
-                    if (type.isTextureType()) {
-                        renderer.setTexture(unit, (Texture) override.getValue());
-                        uniform.setValue(VarType.Int, unit);
-                        unit++;
-                    } else {
-                        uniform.setValue(type, override.getValue());
-                    }
-                } else {
-                    uniform.clearValue();
-                }
+            if (paramDef == null || paramDef.getVarType() != type || !override.isEnabled()) {
+                continue;
             }
+
+            Uniform uniform = shader.getUniform(override.getPrefixedName());
+
+            if (override.getValue() != null) {
+                if (type.isTextureType()) {
+                    renderer.setTexture(unit, (Texture) override.getValue());
+                    uniform.setValue(VarType.Int, unit);
+                    unit++;
+                } else {
+                    uniform.setValue(type, override.getValue());
+                }
+            } else {
+                uniform.clearValue();
+            }
+        }
         return unit;
     }
 
-    private void updateShaderMaterialParameters(Renderer renderer, Shader shader,
+    private int updateShaderMaterialParameters(Renderer renderer, Shader shader,
             List<MatParamOverride> worldOverrides, List<MatParamOverride> forcedOverrides) {
 
         int unit = 0;
@@ -808,6 +822,8 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             }
         }
 
+        //TODO HACKY HACK remove this when texture unit is handled by the uniform.
+        return unit;
     }
 
     private void updateRenderState(RenderManager renderManager, Renderer renderer, TechniqueDef techniqueDef) {
@@ -960,13 +976,13 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         renderManager.updateUniformBindings(shader);
         
         // Set material parameters
-        updateShaderMaterialParameters(renderer, shader, overrides, renderManager.getForcedMatParams());
+        int unit = updateShaderMaterialParameters(renderer, shader, overrides, renderManager.getForcedMatParams());
         
         // Clear any uniforms not changed by material.
         resetUniformsNotSetByCurrent(shader);
         
         // Delegate rendering to the technique
-        technique.render(renderManager, shader, geometry, lights);
+        technique.render(renderManager, shader, geometry, lights, unit);
     }
 
     /**
@@ -1056,7 +1072,6 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             MatParam param = entry.getValue();
             if (param instanceof MatParamTexture) {
                 MatParamTexture texVal = (MatParamTexture) param;
-
                 // the texture failed to load for this param
                 // do not add to param values
                 if (texVal.getTextureValue() == null || texVal.getTextureValue().getImage() == null) {
@@ -1091,11 +1106,14 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             // Try to guess values of "apply" render state based on defaults
             // if value != default then set apply to true
             additionalState.applyPolyOffset = additionalState.offsetEnabled;
+            additionalState.applyAlphaFallOff = additionalState.alphaTest;
+            additionalState.applyAlphaTest = additionalState.alphaTest;
             additionalState.applyBlendMode = additionalState.blendMode != BlendMode.Off;
             additionalState.applyColorWrite = !additionalState.colorWrite;
             additionalState.applyCullMode = additionalState.cullMode != FaceCullMode.Back;
             additionalState.applyDepthTest = !additionalState.depthTest;
             additionalState.applyDepthWrite = !additionalState.depthWrite;
+            additionalState.applyPointSprite = additionalState.pointSprite;
             additionalState.applyStencilTest = additionalState.stencilTest;
             additionalState.applyWireFrame = additionalState.wireframe;
         }
