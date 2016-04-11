@@ -87,7 +87,7 @@ public class DefaultTechniqueDefLogic implements TechniqueDefLogic {
     }
 
     @Override
-    public void render(RenderManager renderManager, Shader shader, Geometry geometry, LightList lights) {
+    public void render(RenderManager renderManager, Shader shader, Geometry geometry, LightList lights, int lastTexUnit) {
         Renderer renderer = renderManager.getRenderer();
         renderer.setShader(shader);
         renderMeshFromGeometry(renderer, geometry);
