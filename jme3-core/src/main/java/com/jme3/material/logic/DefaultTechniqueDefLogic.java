@@ -86,10 +86,8 @@ public class DefaultTechniqueDefLogic implements TechniqueDefLogic {
         return ambientLightColor;
     }
 
-
-
     @Override
-    public void render(RenderManager renderManager, Shader shader, Geometry geometry, LightList lights, int lastTexUnit) {
+    public void render(RenderManager renderManager, Shader shader, Geometry geometry, LightList lights) {
         Renderer renderer = renderManager.getRenderer();
         renderer.setShader(shader);
         renderMeshFromGeometry(renderer, geometry);

@@ -31,9 +31,12 @@
  */
 package com.jme3.material.plugins;
 
-import com.jme3.material.logic.*;
+import com.jme3.material.logic.MultiPassLightingLogic;
+import com.jme3.material.logic.SinglePassLightingLogic;
+import com.jme3.material.logic.DefaultTechniqueDefLogic;
 import com.jme3.asset.*;
 import com.jme3.material.*;
+import com.jme3.material.RenderState.BlendEquation;
 import com.jme3.material.RenderState.BlendMode;
 import com.jme3.material.RenderState.FaceCullMode;
 import com.jme3.material.TechniqueDef.LightMode;
@@ -77,14 +80,14 @@ public class J3MLoader implements AssetLoader {
     private RenderState renderState;
     private ArrayList<String> presetDefines = new ArrayList<String>();
 
-    private EnumMap<Shader.ShaderType, String> shaderLanguage;
-    private EnumMap<Shader.ShaderType, String> shaderName;
+    private EnumMap<Shader.ShaderType, String> shaderLanguages;
+    private EnumMap<Shader.ShaderType, String> shaderNames;
 
     private static final String whitespacePattern = "\\p{javaWhitespace}+";
 
     public J3MLoader() {
-        shaderLanguage = new EnumMap<Shader.ShaderType, String>(Shader.ShaderType.class);
-        shaderName = new EnumMap<Shader.ShaderType, String>(Shader.ShaderType.class);
+        shaderLanguages = new EnumMap<>(Shader.ShaderType.class);
+        shaderNames = new EnumMap<>(Shader.ShaderType.class);
     }
 
 
@@ -107,8 +110,8 @@ public class J3MLoader implements AssetLoader {
     }
 
     private void readShaderDefinition(Shader.ShaderType shaderType, String name, String language) {
-        shaderName.put(shaderType, name);
-        shaderLanguage.put(shaderType, language);
+        shaderNames.put(shaderType, name);
+        shaderLanguages.put(shaderType, language);
     }
 
     // LightMode <MODE>
@@ -117,23 +120,9 @@ public class J3MLoader implements AssetLoader {
         if (split.length != 2){
             throw new IOException("LightMode statement syntax incorrect");
         }
-
         LightMode lm = LightMode.valueOf(split[1]);
-        if (lm == LightMode.FixedPipeline) {
-            throw new UnsupportedOperationException("OpenGL1 is not supported");
-        }
+        
         technique.setLightMode(lm);
-    }
-    
-    
-    // LightMode <SPACE>
-    private void readLightSpace(String statement) throws IOException{
-        String[] split = statement.split(whitespacePattern);
-        if (split.length != 2){
-            throw new IOException("LightSpace statement syntax incorrect");
-        }
-        TechniqueDef.LightSpace ls = TechniqueDef.LightSpace.valueOf(split[1]);        
-        technique.setLightSpace(ls);
     }
 
     // ShadowMode <MODE>
@@ -461,9 +450,12 @@ public class J3MLoader implements AssetLoader {
             renderState.setDepthTest(parseBoolean(split[1]));
         }else if (split[0].equals("Blend")){
             renderState.setBlendMode(BlendMode.valueOf(split[1]));
+        }else if (split[0].equals("BlendEquation")){
+            renderState.setBlendEquation(BlendEquation.valueOf(split[1]));
+        }else if (split[0].equals("BlendEquationAlpha")){
+            renderState.setBlendEquationAlpha(RenderState.BlendEquationAlpha.valueOf(split[1]));
         }else if (split[0].equals("AlphaTestFalloff")){
-            renderState.setAlphaTest(true);
-            renderState.setAlphaFallOff(Float.parseFloat(split[1]));
+            // Ignore for backwards compatbility
         }else if (split[0].equals("PolyOffset")){
             float factor = Float.parseFloat(split[1]);
             float units = Float.parseFloat(split[2]);
@@ -471,7 +463,7 @@ public class J3MLoader implements AssetLoader {
         }else if (split[0].equals("ColorWrite")){
             renderState.setColorWrite(parseBoolean(split[1]));
         }else if (split[0].equals("PointSprite")){
-            renderState.setPointSprite(parseBoolean(split[1]));
+		// ignore for backwards compat
         }else if (split[0].equals("DepthFunc")){
             renderState.setDepthFunc(RenderState.TestFunction.valueOf(split[1]));
         }else if (split[0].equals("AlphaFunc")){
@@ -551,8 +543,6 @@ public class J3MLoader implements AssetLoader {
             readShaderStatement(statement.getLine());
         }else if (split[0].equals("LightMode")){
             readLightMode(statement.getLine());
-        }else if (split[0].equals("LightSpace")){
-            readLightSpace(statement.getLine());
         }else if (split[0].equals("ShadowMode")){
             readShadowMode(statement.getLine());
         }else if (split[0].equals("WorldParameters")){
@@ -607,16 +597,16 @@ public class J3MLoader implements AssetLoader {
         isUseNodes = false;
         String[] split = techStat.getLine().split(whitespacePattern);
         
+        String name;
         if (split.length == 1) {
-            String techniqueUniqueName = materialDef.getAssetName() + "@Default";
-            technique = new TechniqueDef(null, techniqueUniqueName.hashCode());
+            name = TechniqueDef.DEFAULT_TECHNIQUE_NAME;
         } else if (split.length == 2) {
-            String techName = split[1];
-            String techniqueUniqueName = materialDef.getAssetName() + "@" + techName;
-            technique = new TechniqueDef(techName, techniqueUniqueName.hashCode());
+            name = split[1];
         } else {
             throw new IOException("Technique statement syntax incorrect");
         }
+        String techniqueUniqueName = materialDef.getAssetName() + "@" + name;
+        technique = new TechniqueDef(name, techniqueUniqueName.hashCode());
 
         for (Statement statement : techStat.getContents()){
             readTechniqueStatement(statement);
@@ -633,8 +623,17 @@ public class J3MLoader implements AssetLoader {
             technique.setShaderFile(technique.hashCode() + "", technique.hashCode() + "", "GLSL100", "GLSL100");
         }
 
-        if (shaderName.containsKey(Shader.ShaderType.Vertex) && shaderName.containsKey(Shader.ShaderType.Fragment)) {
-            technique.setShaderFile(shaderName, shaderLanguage);
+        if (shaderNames.containsKey(Shader.ShaderType.Vertex) && shaderNames.containsKey(Shader.ShaderType.Fragment)) {
+            technique.setShaderFile(shaderNames, shaderLanguages);
+        } else {
+            technique = null;
+            shaderLanguages.clear();
+            shaderNames.clear();
+            presetDefines.clear();
+            logger.log(Level.WARNING, "Fixed function technique was ignored");
+            logger.log(Level.WARNING, "Fixed function technique ''{0}'' was ignored for material {1}",
+                    new Object[]{name, key});
+            return;
         }
         
         technique.setShaderPrologue(createShaderPrologue(presetDefines));
@@ -649,17 +648,14 @@ public class J3MLoader implements AssetLoader {
             case SinglePass:
                 technique.setLogic(new SinglePassLightingLogic(technique));
                 break;
-            case SinglePassAndImageBased:
-                technique.setLogic(new SinglePassAndImageBasedLightingLogic(technique));
-                break;
             default:
                 throw new UnsupportedOperationException();
         }
 
         materialDef.addTechniqueDef(technique);
         technique = null;
-        shaderLanguage.clear();
-        shaderName.clear();
+        shaderLanguages.clear();
+        shaderNames.clear();
         presetDefines.clear();
     }
 
@@ -781,7 +777,7 @@ public class J3MLoader implements AssetLoader {
 
     protected void initNodesLoader() {
         if (!isUseNodes) {
-            isUseNodes = shaderName.get(Shader.ShaderType.Vertex) == null && shaderName.get(Shader.ShaderType.Fragment) == null;
+            isUseNodes = shaderNames.get(Shader.ShaderType.Vertex) == null && shaderNames.get(Shader.ShaderType.Fragment) == null;
             if (isUseNodes) {
                 if (nodesLoaderDelegate == null) {
                     nodesLoaderDelegate = new ShaderNodeLoaderDelegate();
