@@ -72,8 +72,8 @@ public class GlfwMouseInput implements MouseInput {
     private LwjglWindow context;
     private RawInputListener listener;
     private boolean cursorVisible = true;
-    private int mouseX;
-    private int mouseY;
+    private int mouseX, xDelta;
+    private int mouseY, yDelta;
     private int mouseWheel;
     private boolean initialized;
     private GLFWCursorPosCallback cursorPosCallback;
@@ -89,8 +89,6 @@ public class GlfwMouseInput implements MouseInput {
     }
 
     private void onCursorPos(long window, double xpos, double ypos) {
-                int xDelta;
-                int yDelta;
                 int x = (int) Math.round(xpos);
                 int y = context.getSettings().getHeight() - (int) Math.round(ypos);
 
@@ -170,6 +168,19 @@ public class GlfwMouseInput implements MouseInput {
         if (cursorVisible) {
             glfwSetInputMode(context.getWindowHandle(), GLFW_CURSOR, GLFW_CURSOR_HIDDEN);            
         }
+    }
+    
+    public int getLastDeltaX() {
+        return xDelta;
+    }
+    
+    public int getLastDeltaY() {
+        return yDelta;
+    }
+    
+    public void clearDeltas() {
+        xDelta = 0;
+        yDelta = 0;
     }
     
     public boolean isInitialized() {
