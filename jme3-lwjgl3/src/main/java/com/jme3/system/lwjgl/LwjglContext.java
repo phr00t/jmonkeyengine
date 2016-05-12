@@ -90,9 +90,9 @@ public abstract class LwjglContext implements JmeContext {
 
     protected int determineMaxSamples() {
         // If we already have a valid context, determine samples using current context.
-        if (GLFW.glfwExtensionSupported("GL_ARB_framebuffer_object") == GLFW_TRUE) {
+        if (GLFW.glfwExtensionSupported("GL_ARB_framebuffer_object")) {
             return glGetInteger(ARBFramebufferObject.GL_MAX_SAMPLES);
-        } else if (GLFW.glfwExtensionSupported("GL_EXT_framebuffer_multisample") == GLFW_TRUE) {
+        } else if (GLFW.glfwExtensionSupported("GL_EXT_framebuffer_multisample")) {
             return glGetInteger(EXTFramebufferMultisample.GL_MAX_SAMPLES_EXT);
         }
 

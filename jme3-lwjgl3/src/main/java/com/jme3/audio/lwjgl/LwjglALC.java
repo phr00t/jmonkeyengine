@@ -48,34 +48,40 @@ public class LwjglALC implements ALC {
     private long contextId;
     private long deviceId;
 
+    @Override
     public void createALC() {
         // Can call "alc" functions at any time
         deviceId = alcOpenDevice((ByteBuffer)null);
         ALCCapabilities deviceCaps = org.lwjgl.openal.ALC.createCapabilities(deviceId);
 
-        contextId = alcCreateContext(deviceId, (ByteBuffer)null);
+        contextId = alcCreateContext(deviceId, (IntBuffer)null);
         alcMakeContextCurrent(contextId);
         AL.createCapabilities(deviceCaps);
     }
 
+    @Override
     public void destroyALC() {
         if (deviceId != 0) {
             alcCloseDevice(deviceId);
         }
     }
 
+    @Override
     public boolean isCreated() {
         return contextId != 0;
     }
 
+    @Override
     public String alcGetString(final int parameter) {
         return ALC10.alcGetString(deviceId, parameter);
     }
 
+    @Override
     public boolean alcIsExtensionPresent(final String extension) {
         return ALC10.alcIsExtensionPresent(deviceId, extension);
     }
 
+    @Override
     public void alcGetInteger(final int param, final IntBuffer buffer, final int size) {
         if (buffer.position() != 0) {
             throw new AssertionError();
@@ -86,10 +92,12 @@ public class LwjglALC implements ALC {
         ALC10.alcGetIntegerv(deviceId, param, buffer);
     }
 
+    @Override
     public void alcDevicePauseSOFT() {
         SOFTPauseDevice.alcDevicePauseSOFT(deviceId);
     }
 
+    @Override
     public void alcDeviceResumeSOFT() {
         SOFTPauseDevice.alcDeviceResumeSOFT(deviceId);
     }

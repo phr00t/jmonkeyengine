@@ -32,9 +32,11 @@
 package com.jme3.material;
 
 import com.jme3.asset.AssetManager;
-import com.jme3.renderer.Caps;
+import com.jme3.export.*;
 import com.jme3.shader.VarType;
 import com.jme3.texture.image.ColorSpace;
+
+import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,7 +46,7 @@ import java.util.logging.Logger;
  * 
  * @author Kirill Vainer
  */
-public class MaterialDef {
+public class MaterialDef{
 
     private static final Logger logger = Logger.getLogger(MaterialDef.class.getName());
 
@@ -185,4 +187,13 @@ public class MaterialDef {
     public List<TechniqueDef> getTechniqueDefs(String name) {
         return techniques.get(name);
     }
+
+    /**
+     *
+     * @return the list of all the technique definitions names.
+     */
+    public Collection<String> getTechniqueDefsNames(){
+        return techniques.keySet();
+    }
+
 }

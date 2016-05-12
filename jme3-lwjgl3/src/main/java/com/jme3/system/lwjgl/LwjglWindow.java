@@ -133,7 +133,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
             }
         });
 
-        if (glfwInit() != GLFW_TRUE) {
+        if ( glfwInit() == false ) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
 
@@ -200,9 +200,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
 
         glfwSetWindowFocusCallback(window, windowFocusCallback = new GLFWWindowFocusCallback() {
             @Override
-            public void invoke(final long window, final int focused) {
-                final boolean focus = (focused == GL_TRUE);
-
+            public void invoke(final long window, final boolean focus) {
                 if (wasActive != focus) {
                     if (!wasActive) {
                         listener.gainFocus();
@@ -459,7 +457,7 @@ public abstract class LwjglWindow extends LwjglContext implements Runnable {
                 break;
             }
 
-            if (glfwWindowShouldClose(window) == GL_TRUE) {
+            if (glfwWindowShouldClose(window)) {
                 listener.requestClose(false);
             }
         }
