@@ -720,14 +720,20 @@ public class RenderManager {
         renderSubScene(scene, vp);
     }
     
-    private InstancedGeometry addToInstancedGeometry(Geometry geom) {
+    private Material setMaterialVRInstancing(Geometry geom) {
         Material material = geom.getMaterial();
         MatParam param = material.getMaterialDef().getMaterialParam("RightEyeViewProjectionMatrix");
         if (param == null) {
             System.out.println("VR instance failed on geo '" + geom.getName() + "', material '" + material.getMaterialDef().getAssetName() + "' Check material params!");
             return null;
         }
-        material.setMatrix4("RightEyeViewProjectionMatrix", _VRInstancing_RightCamProjection);
+        material.setMatrix4("RightEyeViewProjectionMatrix", _VRInstancing_RightCamProjection);        
+        return material;
+    }
+    
+    private InstancedGeometry addToInstancedGeometry(Geometry geom) {
+        Material material = setMaterialVRInstancing(geom);
+        if( material == null ) return null;
         InstancedGeometry ig = new InstancedGeometry(geom.getName() + "-instance", false, 2);
         ig.forceLinkedGeometry(geom);
         ig.setMaterial(material);
@@ -766,6 +772,10 @@ public class RenderManager {
                     if( g.getParent() == null ) {
                         scene.removeFromParent();
                         return;
+                    }
+                    // fix potential material switches
+                    if( ((InstancedGeometry)scene).forcedGeometryMatrialMismatch() ) {
+                        setMaterialVRInstancing((InstancedGeometry)scene);
                     }
                 }
                 needsInstanceUpdate = true;

@@ -39,7 +39,7 @@ import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
-import com.jme3.font.BitmapText;
+import com.jme3.material.Material;
 import com.jme3.math.Matrix3f;
 import com.jme3.math.Matrix4f;
 import com.jme3.math.Quaternion;
@@ -215,7 +215,25 @@ public class InstancedGeometry extends Geometry {
         }
         return super.getWorldTransform();                                
     }
+    
+    @Override
+    public Material getMaterial() {
+        if( forceLinkedGeometry != null ) {
+            return forceLinkedGeometry.getMaterial();
+        }
+        return super.getMaterial();
+    }
 
+    public boolean forcedGeometryMatrialMismatch() {
+        if( forceLinkedGeometry == null ) return false;
+        Material flgm = forceLinkedGeometry.getMaterial();
+        if( flgm != material ) {
+            material = flgm;
+            return true;
+        }
+        return false;
+    }
+    
     @Override
     public CullHint getCullHint() {
         if( forceLinkedGeometry != null ) {
