@@ -31,6 +31,8 @@
  */
 package com.jme3.system.lwjgl;
 
+import com.jme3.opencl.Context;
+
 /**
  * @author Daniel Johansson
  */
@@ -38,5 +40,10 @@ public class LwjglDisplay extends LwjglWindow {
 
     public LwjglDisplay() {
         super(Type.Display);
+    }
+
+    @Override
+    public Context getOpenCLContext() {
+        return null;
     }
 }

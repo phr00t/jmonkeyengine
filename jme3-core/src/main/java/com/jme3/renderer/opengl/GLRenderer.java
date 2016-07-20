@@ -35,6 +35,7 @@ import com.jme3.material.RenderState;
 import com.jme3.material.RenderState.StencilOperation;
 import com.jme3.material.RenderState.TestFunction;
 import com.jme3.math.*;
+import com.jme3.opencl.OpenCLObjectManager;
 import com.jme3.renderer.*;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.Mesh.Mode;
@@ -556,6 +557,7 @@ public final class GLRenderer implements Renderer {
     public void cleanup() {
         logger.log(Level.FINE, "Deleting objects and invalidating state");
         objManager.deleteAllObjects(this);
+        OpenCLObjectManager.getInstance().deleteAllObjects();
         statistics.clearMemory();
         invalidateState();
     }
@@ -939,6 +941,7 @@ public final class GLRenderer implements Renderer {
 
     public void postFrame() {
         objManager.deleteUnused(this);
+        OpenCLObjectManager.getInstance().deleteUnusedObjects();
         gl.resetStats();
     }
 

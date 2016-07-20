@@ -54,6 +54,7 @@ import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.image.ColorSpace;
 import com.jme3.util.ListMap;
+import com.jme3.util.SafeArrayList;
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
@@ -786,7 +787,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     }
 
     private int updateShaderMaterialParameters(Renderer renderer, Shader shader,
-            List<MatParamOverride> worldOverrides, List<MatParamOverride> forcedOverrides) {
+                 SafeArrayList<MatParamOverride> worldOverrides, SafeArrayList<MatParamOverride> forcedOverrides) {
 
         int unit = 0;
         if (worldOverrides != null) {
@@ -956,7 +957,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         updateRenderState(renderManager, renderer, techniqueDef);
 
         // Get world overrides
-        List<MatParamOverride> overrides = geometry.getWorldMatParamOverrides();
+        SafeArrayList<MatParamOverride> overrides = geometry.getWorldMatParamOverrides();
 
         // Select shader to use
         Shader shader = technique.makeCurrent(renderManager, overrides, renderManager.getForcedMatParams(), lights, rendererCaps);
@@ -968,8 +969,10 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         renderManager.updateUniformBindings(shader);
         
         // Set material parameters
+
+        //TODO RRemove the unit when texture units are handled in the Uniform
         int unit = updateShaderMaterialParameters(renderer, shader, overrides, renderManager.getForcedMatParams());
-        
+
         // Clear any uniforms not changed by material.
         resetUniformsNotSetByCurrent(shader);
         
@@ -1003,8 +1006,8 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     @Override
     public String toString() {
         return "Material[name=" + name + 
-                ", def=" + def.getName() + 
-                ", tech=" + technique.getDef().getName() + 
+                ", def=" + (def != null ? def.getName() : null) + 
+                ", tech=" + (technique != null && technique.getDef() != null ? technique.getDef().getName() : null) + 
                 "]";
     }
 
@@ -1098,14 +1101,11 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
             // Try to guess values of "apply" render state based on defaults
             // if value != default then set apply to true
             additionalState.applyPolyOffset = additionalState.offsetEnabled;
-            //additionalState.applyAlphaFallOff = additionalState.alphaTest;
-            //additionalState.applyAlphaTest = additionalState.alphaTest;
             additionalState.applyBlendMode = additionalState.blendMode != BlendMode.Off;
             additionalState.applyColorWrite = !additionalState.colorWrite;
             additionalState.applyCullMode = additionalState.cullMode != FaceCullMode.Back;
             additionalState.applyDepthTest = !additionalState.depthTest;
             additionalState.applyDepthWrite = !additionalState.depthWrite;
-            //additionalState.applyPointSprite = additionalState.pointSprite;
             additionalState.applyStencilTest = additionalState.stencilTest;
             additionalState.applyWireFrame = additionalState.wireframe;
         }

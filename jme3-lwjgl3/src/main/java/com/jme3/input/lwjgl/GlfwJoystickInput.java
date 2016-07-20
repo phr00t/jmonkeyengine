@@ -41,6 +41,7 @@ import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.lwjgl.glfw.GLFW;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -65,7 +66,7 @@ public class GlfwJoystickInput implements JoyInput {
     @Override
     public Joystick[] loadJoysticks(final InputManager inputManager) {
         for (int i = 0; i < GLFW_JOYSTICK_LAST; i++) {
-            if (glfwJoystickPresent(i) == GL11.GL_TRUE) {
+            if (glfwJoystickPresent(i) == GLFW.GLFW_TRUE) {
                 final String name = glfwGetJoystickName(i);
                 final GlfwJoystick joystick = new GlfwJoystick(inputManager, this, i, name);
                 joysticks.put(i, joystick);

@@ -31,6 +31,7 @@
  */
 package com.jme3.system.lwjgl;
 
+import com.jme3.opencl.Context;
 import com.jme3.system.JmeContext;
 
 /**
@@ -40,5 +41,10 @@ public class LwjglOffscreenBuffer extends LwjglWindow {
 
     public LwjglOffscreenBuffer() {
         super(JmeContext.Type.OffscreenSurface);
+    }
+
+    @Override
+    public Context getOpenCLContext() {
+        return null;
     }
 }

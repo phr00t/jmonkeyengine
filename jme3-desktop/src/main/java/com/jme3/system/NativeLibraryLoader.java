@@ -671,12 +671,11 @@ public final class NativeLibraryLoader {
         } finally {
             // XXX: HACK. Vary loading method based on library name..
             // lwjgl and jinput handle loading by themselves.
-            if (name.equals("lwjgl") || name.equals("lwjgl3")) {
-                System.setProperty("org.lwjgl.librarypath", 
-                                   extactionDirectory.getAbsolutePath());
+            if( name.contains("lwjgl3") ) {                
+                System.setProperty("org.lwjgl.librarypath", extactionDirectory.getAbsolutePath());
+                System.setProperty("java.library.path", extactionDirectory.getAbsolutePath());
             } else if (name.equals("jinput")) {
-                System.setProperty("net.java.games.input.librarypath", 
-                                   extactionDirectory.getAbsolutePath());
+                System.setProperty("net.java.games.input.librarypath", extactionDirectory.getAbsolutePath());
             } else {
                 // all other libraries (openal, bulletjme, custom)
                 // will load directly in here.

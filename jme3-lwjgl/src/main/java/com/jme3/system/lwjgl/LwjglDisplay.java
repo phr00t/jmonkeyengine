@@ -156,6 +156,10 @@ public class LwjglDisplay extends LwjglAbstractDisplay {
                 GL11.glEnable(ARBMultisample.GL_MULTISAMPLE_ARB);
             }
         }
+        
+        if (settings.isOpenCLSupport()) {
+            initOpenCL();
+        }
     }
     
     protected void destroyContext(){
